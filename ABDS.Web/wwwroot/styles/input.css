@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 246 248 252;
+    --surface: 255 255 255;
+    --surface-low: 241 245 249;
+    --surface-high: 226 232 240;
+    --outline: 203 213 225;
+    --content: 15 23 42;
+    --muted: 71 85 105;
+    --primary: 0 109 60;
+    --secondary: 0 95 109;
+    --warning: 161 98 7;
+    --danger: 185 28 28;
+  }
+
+  .dark {
+    --background: 11 19 38;
+    --surface: 23 31 51;
+    --surface-low: 19 27 46;
+    --surface-high: 45 52 73;
+    --outline: 59 75 62;
+    --content: 218 226 253;
+    --muted: 185 203 187;
+    --primary: 0 227 132;
+    --secondary: 0 224 255;
+    --warning: 255 220 106;
+    --danger: 255 180 171;
+  }
+
+  body {
+    min-height: 100vh;
+    background: rgb(var(--background));
+    color: rgb(var(--content));
+  }
+}
+
+@layer components {
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24;
+    line-height: 1;
+  }
+
+  .dark .glow-primary { box-shadow: 0 0 18px rgba(0, 227, 132, 0.2); }
+  .dark .glow-secondary { box-shadow: 0 0 18px rgba(0, 224, 255, 0.18); }
+  .dark .glow-danger { box-shadow: 0 0 18px rgba(255, 180, 171, 0.18); }
+}

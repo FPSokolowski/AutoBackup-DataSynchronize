@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-ABDS.Service-a9bb28f3-4d9b-4784-8823-5104a1fea858</UserSecretsId>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.WinUI.Notifications" Version="7.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ABDS.Core\ABDS.Core.csproj" />
+    <ProjectReference Include="..\ABDS.SharedIpc\ABDS.SharedIpc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Resources\icon.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="ABDS.App.Views.StatusPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ABDS.App.ViewModels">
+
+    <ContentPage.Content>
+        <VerticalStackLayout Padding="12" Spacing="10">
+
+            <HorizontalStackLayout Spacing="10">
+                <Label Text="Tray:" FontAttributes="Bold"/>
+                <Label Text="{Binding TraySeverity}" />
+                <Button Text="Odśwież" Command="{Binding RefreshCommand}" />
+            </HorizontalStackLayout>
+
+            <Label Text="{Binding TrayTooltip}" FontSize="12" LineBreakMode="WordWrap" />
+
+            <Label Text="Synchronizacje" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding SyncPairs}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border StrokeThickness="1" Padding="10" Margin="0,0,0,8">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{Binding SourcePath}" FontAttributes="Bold" />
+                                <Label Text="{Binding TargetPath}" FontSize="12" />
+
+                                <HorizontalStackLayout Spacing="12">
+                                    <Label Text="{Binding LastState}" />
+                                    <Label Text="{Binding LastSuccessAt, StringFormat='LastSuccess: {0:g}'}" FontSize="12"/>
+                                    <Label Text="{Binding LastAttemptAt, StringFormat='LastAttempt: {0:g}'}" FontSize="12"/>
+                                </HorizontalStackLayout>
+
+                                <HorizontalStackLayout Spacing="10">
+                                    <Button Text="Open source"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenPathCommand}"
+                                            CommandParameter="{Binding SourcePath}" />
+                                    <Button Text="Open target"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenPathCommand}"
+                                            CommandParameter="{Binding TargetPath}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="Backupy" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding BackupSources}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border StrokeThickness="1" Padding="10" Margin="0,0,0,8">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{Binding SourcePath}" FontAttributes="Bold" />
+                                <Label Text="{Binding BackupRootPath}" FontSize="12" />
+
+                                <HorizontalStackLayout Spacing="12">
+                                    <Label Text="{Binding LastState}" />
+                                    <Label Text="{Binding LastSuccessAt, StringFormat='LastSuccess: {0:g}'}" FontSize="12"/>
+                                    <Label Text="{Binding LastAttemptAt, StringFormat='LastAttempt: {0:g}'}" FontSize="12"/>
+                                </HorizontalStackLayout>
+
+                                <HorizontalStackLayout Spacing="10">
+                                    <Button Text="Open source"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenPathCommand}"
+                                            CommandParameter="{Binding SourcePath}" />
+                                    <Button Text="Open backup folder"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenPathCommand}"
+                                            CommandParameter="{Binding BackupRootPath}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ContentPage.Content>
+</ContentPage>

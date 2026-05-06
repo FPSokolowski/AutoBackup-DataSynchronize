@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pl" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ABDS System</title>
+  <link rel="icon" href="/assets/icon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/assets/icon.png" />
+  <link rel="stylesheet" href="/styles/app.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <script>
+    const prefCookie = Object.fromEntries(document.cookie.split(';').map(x => x.trim()).filter(Boolean).map(x => {
+      const [k, ...v] = x.split('=');
+      return [decodeURIComponent(k), decodeURIComponent(v.join('='))];
+    }));
+    const savedTheme = prefCookie['abds-theme'] || localStorage.getItem('abds-theme') || 'system';
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark' || (savedTheme === 'system' && prefersDark));
+    document.documentElement.lang = prefCookie['abds-language'] || localStorage.getItem('abds-language') || 'pl';
+  </script>
+</head>
+<body class="min-h-screen bg-background text-content antialiased">
+  <div class="min-h-screen lg:flex">
+    <aside class="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-outline bg-surface-low lg:flex lg:flex-col">
+      <div class="px-8 py-7">
+        <div class="flex items-center gap-3">
+          <img src="/assets/icon.png" alt="ABDS" class="h-10 w-10 rounded-lg" />
+          <div>
+            <h1 class="font-display text-2xl font-semibold text-content">ABDS System</h1>
+            <p class="mt-1 font-mono text-xs text-primary">local safety net</p>
+          </div>
+        </div>
+      </div>
+      <nav id="sideNav" class="flex-1 space-y-1 px-3"></nav>
+      <div class="border-t border-outline p-5">
+        <div class="flex items-center gap-3">
+          <span id="navStatusDot" class="h-2.5 w-2.5 rounded-full bg-warning"></span>
+          <div>
+            <div id="navStatusText" class="text-sm font-semibold">Łączenie</div>
+              <div class="font-mono text-xs text-muted">ABDS_PIPE_V1</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="min-w-0 flex-1 lg:ml-64">
+      <header class="sticky top-0 z-30 border-b border-outline bg-background/90 backdrop-blur">
+        <div class="flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
+          <div>
+            <div class="flex items-center gap-3">
+              <button id="mobileNavBtn" class="rounded-md border border-outline p-2 lg:hidden">
+                <span class="material-symbols-outlined">menu</span>
+              </button>
+              <div>
+                <div class="flex items-center gap-2">
+                  <img src="/assets/logo.png" alt="ABDS" class="h-8 w-8 rounded-md" />
+                  <p class="font-display text-2xl font-semibold">ABDS</p>
+                </div>
+                <p id="pageSubtitle" class="text-sm text-muted"></p>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="connectionBadge" class="inline-flex items-center gap-2 rounded-md border border-outline bg-surface px-3 py-2 text-sm font-semibold">
+              <span class="h-2 w-2 rounded-full bg-warning"></span>
+              <span data-i18n="connection.connecting">Łączenie</span>
+            </span>
+            <button id="syncAllBtn" class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950 glow-primary">
+              <span class="material-symbols-outlined text-[18px]">sync</span>
+              <span data-i18n="actions.syncNow">Synchronizuj teraz</span>
+            </button>
+            <button id="backupAllBtn" class="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm font-bold text-slate-950 glow-secondary">
+              <span class="material-symbols-outlined text-[18px]">backup</span>
+              <span data-i18n="actions.backupNow">Backup teraz</span>
+            </button>
+            <select id="languageSelect" class="rounded-md border-outline bg-surface text-sm" aria-label="Language">
+              <option value="pl">PL</option>
+              <option value="en">US</option>
+            </select>
+            <select id="themeSelect" class="rounded-md border-outline bg-surface text-sm">
+              <option value="system" data-i18n="theme.system">System</option>
+              <option value="dark" data-i18n="theme.dark">Ciemny</option>
+              <option value="light" data-i18n="theme.light">Jasny</option>
+            </select>
+          </div>
+        </div>
+        <nav id="mobileTabs" class="flex gap-1 overflow-x-auto border-t border-outline px-4 py-2 lg:hidden"></nav>
+      </header>
+
+      <section class="p-4 lg:p-8">
+        <div id="serviceBanner" class="mb-5 hidden rounded-lg border border-danger bg-danger/10 p-4 text-danger">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined">report_problem</span>
+            <div>
+              <div class="font-semibold" data-i18n="connection.offlineTitle">Brak połączenia z usługą ABDS</div>
+              <div class="mt-1 text-sm" data-i18n="connection.offlineBody">Panel działa, ale dane statusu i akcje wymagają uruchomionej usługi Windows.</div>
+              <div id="serviceActions" class="mt-3 flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <section data-panel="status" class="panel space-y-6"></section>
+        <section data-panel="sync" class="panel hidden space-y-6"></section>
+        <section data-panel="backups" class="panel hidden space-y-6"></section>
+        <section data-panel="actions" class="panel hidden space-y-6"></section>
+        <section data-panel="history" class="panel hidden space-y-6"></section>
+        <section data-panel="diagnostics" class="panel hidden space-y-6"></section>
+        <section data-panel="settings" class="panel hidden space-y-6"></section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="taskModal" class="w-[min(980px,calc(100vw-2rem))] rounded-lg border border-outline bg-surface p-0 text-content backdrop:bg-black/70">
+    <div class="flex items-center justify-between border-b border-outline px-5 py-4">
+      <div>
+        <h2 class="font-display text-xl font-semibold" data-i18n="task.detailsTitle">Szczegóły zadania</h2>
+        <p id="taskModalSubtitle" class="mt-1 font-mono text-xs text-muted"></p>
+      </div>
+      <button data-close-modal class="rounded-md border border-outline px-3 py-2 text-sm" data-i18n="common.close">Zamknij</button>
+    </div>
+    <div id="taskModalBody" class="max-h-[76vh] overflow-auto p-5"></div>
+  </dialog>
+
+  <dialog id="editModal" class="w-[min(760px,calc(100vw-2rem))] rounded-lg border border-outline bg-surface p-0 text-content backdrop:bg-black/70">
+    <div class="flex items-center justify-between border-b border-outline px-5 py-4">
+      <h2 id="editModalTitle" class="font-display text-xl font-semibold">Edycja</h2>
+      <button data-close-edit class="rounded-md border border-outline px-3 py-2 text-sm" data-i18n="common.close">Zamknij</button>
+    </div>
+    <form id="editModalBody" class="space-y-4 p-5"></form>
+  </dialog>
+
+  <div id="toastHost" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

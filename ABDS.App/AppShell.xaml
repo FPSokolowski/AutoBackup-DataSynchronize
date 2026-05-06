@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ABDS.App.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:ABDS.App.Views">
+
+    <TabBar>
+        <ShellContent Title="Status" ContentTemplate="{DataTemplate views:StatusPage}" />
+        <ShellContent Title="Konfiguracja" ContentTemplate="{DataTemplate views:ConfigPage}" />
+        <ShellContent Title="Wymuś" ContentTemplate="{DataTemplate views:ActionsPage}" />
+    </TabBar>
+</Shell>

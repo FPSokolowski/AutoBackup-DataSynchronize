@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="ABDS.App.Views.TaskWindowPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <Grid Padding="12" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10">
+
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label Text="{Binding TaskType}" FontAttributes="Bold" FontSize="18"/>
+            <Label Text="{Binding RunId}" FontSize="12"/>
+            <Label Text="{Binding State}" FontAttributes="Bold"/>
+            <Label Text="{Binding Summary}" FontSize="12" LineBreakMode="WordWrap"/>
+        </VerticalStackLayout>
+
+        <!-- Expandable paths -->
+        <Expander Grid.Row="1">
+            <Expander.Header>
+                <Label Text="{Binding TrackedPathsCount, StringFormat='Ścieżki (łącznie): {0} (rozwiń)'}" />
+            </Expander.Header>
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Sources:" FontAttributes="Bold" />
+                <CollectionView ItemsSource="{Binding Sources}" HeightRequest="80">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Label Text="{Binding .}" FontSize="12"/>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Label Text="Targets:" FontAttributes="Bold" />
+                <CollectionView ItemsSource="{Binding Targets}" HeightRequest="80">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Label Text="{Binding .}" FontSize="12"/>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Expander>
+
+        <!-- Progress -->
+        <VerticalStackLayout Grid.Row="2" Spacing="6">
+            <ProgressBar Progress="{Binding ProgressValue}" />
+            <HorizontalStackLayout Spacing="10">
+                <Label Text="{Binding ProgressText}" />
+                <Label Text="{Binding bytesText}" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+        <!-- Console -->
+        <Border Grid.Row="3" BackgroundColor="Black" Padding="8">
+            <CollectionView ItemsSource="{Binding Logs}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="2">
+                            <Label Text="{Binding Text}"
+                                   TextColor="{Binding Foreground}"
+                                   FontFamily="Consolas"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Border>
+
+        <!-- Footer buttons -->
+        <HorizontalStackLayout Grid.Row="4" Spacing="10" HorizontalOptions="End">
+            <Button Text="Eksportuj logi" Command="{Binding ExportLogsCommand}" />
+            <Button Text="Anuluj" Command="{Binding CancelCommand}" IsEnabled="{Binding IsCancelEnabled}" />
+            <Button Text="OK" IsEnabled="{Binding IsOkEnabled}" />
+        </HorizontalStackLayout>
+
+    </Grid>
+</ContentPage>

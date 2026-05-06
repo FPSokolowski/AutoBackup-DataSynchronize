@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="ABDS.App.Views.ActionsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="12">
+
+            <Label Text="Wymuś" FontAttributes="Bold" FontSize="18"/>
+
+            <Button Text="Sync all" Command="{Binding SyncAllCommand}" />
+            <Button Text="Backup all" Command="{Binding BackupAllCommand}" />
+
+            <Label Text="Wymuś dla konkretnej pary" FontAttributes="Bold"/>
+
+            <Entry Placeholder="SourcePath" Text="{Binding SourcePath}" />
+            <Entry Placeholder="TargetPath (dla sync)" Text="{Binding TargetPath}" />
+            <Entry Placeholder="BackupRootPath (dla backup)" Text="{Binding BackupRootPath}" />
+
+            <HorizontalStackLayout Spacing="10">
+                <Button Text="Sync pair" Command="{Binding SyncPairCommand}" />
+                <Button Text="Backup source" Command="{Binding BackupSourceCommand}" />
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,33 @@
+﻿<VerticalStackLayout Padding="12" Spacing="12">
+
+    <Label Text="Metoda porównywania plików"
+           FontAttributes="Bold"
+           FontSize="16" />
+
+    <!-- PICKER -->
+    <Picker ItemsSource="{Binding Modes}"
+            SelectedItem="{Binding SelectedMode}">
+        <Picker.ItemDisplayBinding>
+            <Binding Path="."
+                     Converter="{StaticResource ComparisonModeConverter}" />
+        </Picker.ItemDisplayBinding>
+    </Picker>
+
+    <!-- OPIS DYNAMICZNY -->
+    <Label Text="{Binding SelectedModeDescription}"
+           FontSize="12"
+           TextColor="Gray"
+           LineBreakMode="WordWrap" />
+
+    <!-- HASH THRESHOLD -->
+    <HorizontalStackLayout Spacing="8">
+        <Label Text="Hash poniżej (MB):"
+               VerticalOptions="Center"/>
+
+        <Entry Text="{Binding HashThresholdMb}"
+               Keyboard="Numeric"
+               WidthRequest="80"
+               IsEnabled="{Binding IsThresholdEditable}" />
+    </HorizontalStackLayout>
+
+</VerticalStackLayout>

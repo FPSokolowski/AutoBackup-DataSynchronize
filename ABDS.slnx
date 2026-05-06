@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="ABDS.Cli/ABDS.Cli.csproj" />
+    <Project Path="ABDS.Core/ABDS.Core.csproj" />
+    <Project Path="ABDS.DesktopHost/ABDS.DesktopHost.csproj" />
+    <Project Path="ABDS.Service/ABDS.Service.csproj" />
+    <Project Path="ABDS.SharedIpc/ABDS.SharedIpc.csproj" />
+    <Project Path="ABDS.TrayAgent/ABDS.TrayAgent.csproj" />
+    <Project Path="ABDS.Web/ABDS.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ABDS.Core.Tests/ABDS.Core.Tests.csproj" />
+  </Folder>
+</Solution>
