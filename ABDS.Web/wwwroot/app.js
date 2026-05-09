@@ -1,6 +1,6 @@
 const dictionaries = {
   pl: {
-    appSubtitle: 'local safety backup',
+    appSubtitle: 'protect your data',
     common: {
       close: 'Zamknij',
       copy: 'Kopiuj',
@@ -209,7 +209,7 @@ const dictionaries = {
     modes: ['Tylko metadane', 'Hash poniżej limitu', 'Hash wszystkiego']
   },
   en: {
-    appSubtitle: 'local safety backup',
+    appSubtitle: 'protect your data',
     common: {
       close: 'Close',
       copy: 'Copy',
