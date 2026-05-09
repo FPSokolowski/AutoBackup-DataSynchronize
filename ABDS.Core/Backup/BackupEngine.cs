@@ -1,4 +1,6 @@
-﻿using ABDS.Core.IO;
+using System.Formats.Tar;
+using System.IO.Compression;
+using ABDS.Core.Models;
 
 namespace ABDS.Core.Backup;
 
@@ -7,6 +9,9 @@ public static class BackupEngine
     public static async Task RunBackupAsync(
         string sourcePath,
         string backupRoot,
+        string backupName,
+        BackupArchiveFormat archiveFormat,
+        BackupCompressionPreset compressionPreset,
         long maxStorageBytes,
         CancellationToken ct,
         Func<string, Task> info,
@@ -20,32 +25,84 @@ public static class BackupEngine
         Directory.CreateDirectory(backupRoot);
 
         var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        var snapshotRoot = Path.Combine(backupRoot, stamp);
-        Directory.CreateDirectory(snapshotRoot);
+        var safeName = SanitizeFileName(string.IsNullOrWhiteSpace(backupName) ? new DirectoryInfo(sourcePath).Name : backupName);
+        var extension = archiveFormat == BackupArchiveFormat.TarGz ? ".tar.gz" : ".zip";
+        var archivePath = Path.Combine(backupRoot, $"{stamp}_{safeName}{extension}");
+        var tempArchivePath = archivePath + ".abds_tmp";
 
-        await info($"Backup snapshot: {snapshotRoot}");
+        if (File.Exists(tempArchivePath))
+            File.Delete(tempArchivePath);
+
+        await info($"Backup archive: {archivePath}");
         await info($"Source: {sourcePath}");
+        await info($"Compression: {archiveFormat} / {compressionPreset}");
 
-        foreach (var srcFile in Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories))
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            if (archiveFormat == BackupArchiveFormat.TarGz)
+                await CreateTarGzArchiveAsync(sourcePath, tempArchivePath, ToCompressionLevel(compressionPreset), ct, copiedBytes);
+            else
+                await CreateZipArchiveAsync(sourcePath, tempArchivePath, ToCompressionLevel(compressionPreset), ct, copiedBytes);
 
-            var rel = Path.GetRelativePath(sourcePath, srcFile);
-            var dstFile = Path.Combine(snapshotRoot, rel);
+            File.Move(tempArchivePath, archivePath, overwrite: false);
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(tempArchivePath))
+                    File.Delete(tempArchivePath);
+            }
+            catch { }
 
-            await FileCopyWithRetry.CopyFileAtomicAsync(srcFile, dstFile, ct, info, warn, error);
-
-            // zachowaj LastWriteTimeUtc, żeby przydatne w późniejszym porównaniu
-            var sInfo = new FileInfo(srcFile);
-            File.SetLastWriteTimeUtc(dstFile, sInfo.LastWriteTimeUtc);
-
-            if (copiedBytes is not null)
-                await copiedBytes(sInfo.Length);
+            throw;
         }
 
         await info("Backup complete. Applying retention...");
 
-        ApplyRetention(backupRoot, maxStorageBytes, info).GetAwaiter().GetResult();
+        await ApplyRetention(backupRoot, maxStorageBytes, info);
+    }
+
+    private static async Task CreateZipArchiveAsync(
+        string sourcePath,
+        string archivePath,
+        CompressionLevel compressionLevel,
+        CancellationToken ct,
+        Func<long, Task>? copiedBytes)
+    {
+        using var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create);
+        foreach (var srcFile in Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
+            var rel = Path.GetRelativePath(sourcePath, srcFile);
+            archive.CreateEntryFromFile(srcFile, rel, compressionLevel);
+
+            if (copiedBytes is not null)
+                await copiedBytes(new FileInfo(srcFile).Length);
+        }
+    }
+
+    private static async Task CreateTarGzArchiveAsync(
+        string sourcePath,
+        string archivePath,
+        CompressionLevel compressionLevel,
+        CancellationToken ct,
+        Func<long, Task>? copiedBytes)
+    {
+        await using (var file = File.Create(archivePath))
+        await using (var gzip = new GZipStream(file, compressionLevel))
+        {
+            TarFile.CreateFromDirectory(sourcePath, gzip, includeBaseDirectory: false);
+        }
+
+        if (copiedBytes is null)
+            return;
+
+        foreach (var srcFile in Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
+            await copiedBytes(new FileInfo(srcFile).Length);
+        }
     }
 
     private static async Task ApplyRetention(string backupRoot, long maxBytes, Func<string, Task> info)
@@ -54,6 +111,7 @@ public static class BackupEngine
         {
             if (!Directory.Exists(backupRoot))
                 return 0;
+
             long sum = 0;
             foreach (var file in Directory.EnumerateFiles(backupRoot, "*", SearchOption.AllDirectories))
                 sum += new FileInfo(file).Length;
@@ -67,23 +125,28 @@ public static class BackupEngine
             return;
         }
 
-        // usuń najstarsze snapshoty (katalogi) aż zejdziemy poniżej limitu
-        var dirs = new DirectoryInfo(backupRoot)
-            .EnumerateDirectories()
-            .OrderBy(d => d.CreationTimeUtc)
+        var root = new DirectoryInfo(backupRoot);
+        var items = root.EnumerateDirectories()
+            .Cast<FileSystemInfo>()
+            .Concat(root.EnumerateFiles("*.zip"))
+            .Concat(root.EnumerateFiles("*.tar.gz"))
+            .OrderBy(x => x.CreationTimeUtc)
             .ToList();
 
-        foreach (var d in dirs)
+        foreach (var item in items)
         {
             if (total <= maxBytes)
                 break;
 
-            await info($"Retention delete: {d.FullName}");
+            await info($"Retention delete: {item.FullName}");
             try
             {
-                d.Delete(recursive: true);
+                if (item is DirectoryInfo dir)
+                    dir.Delete(recursive: true);
+                else
+                    item.Delete();
             }
-            catch { /* log ewentualnie */ }
+            catch { }
 
             total = TotalBytes();
         }
@@ -91,13 +154,34 @@ public static class BackupEngine
         await info($"Retention done. Total={FormatBytes(total)}");
     }
 
+    private static CompressionLevel ToCompressionLevel(BackupCompressionPreset preset)
+        => preset switch
+        {
+            BackupCompressionPreset.NoCompression => CompressionLevel.NoCompression,
+            BackupCompressionPreset.Fastest => CompressionLevel.Fastest,
+            BackupCompressionPreset.SmallestSize => CompressionLevel.SmallestSize,
+            _ => CompressionLevel.Optimal
+        };
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = name.Trim().Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
+        var sanitized = new string(chars).Trim('_', '.', ' ');
+        return string.IsNullOrWhiteSpace(sanitized) ? "backup" : sanitized;
+    }
+
     private static string FormatBytes(long b)
     {
-        string[] u = ["B","KB","MB","GB","TB"];
+        string[] u = ["B", "KB", "MB", "GB", "TB"];
         double v = b;
-        int i = 0;
+        var i = 0;
         while (v >= 1024 && i < u.Length - 1)
-        { v /= 1024; i++; }
+        {
+            v /= 1024;
+            i++;
+        }
+
         return $"{v:0.##} {u[i]}";
     }
 

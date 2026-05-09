@@ -1,11 +1,13 @@
 const dictionaries = {
   pl: {
-    appSubtitle: 'local safety net',
+    appSubtitle: 'local safety backup',
     common: {
       close: 'Zamknij',
       copy: 'Kopiuj',
       copied: 'Skopiowano do schowka',
-      retest: 'Testuj ponownie',
+      browse: 'Wskaż',
+      browseFallback: 'Wklej ścieżkę folderu',
+      retest: 'Test',
       save: 'Zapisz',
       cancel: 'Anuluj',
       edit: 'Edytuj',
@@ -27,10 +29,10 @@ const dictionaries = {
       settings: ['Ustawienia', 'Harmonogram i zachowanie']
     },
     connection: {
-      connecting: 'Łączenie',
-      connected: 'Usługa połączona',
-      offline: 'Brak połączenia',
-      offlineTitle: 'Brak połączenia z usługą ABDS',
+      connecting: 'Sprawdzanie usługi',
+      connected: 'Usługa lokalna aktywna',
+      offline: 'Usługa niedostępna',
+      offlineTitle: 'Usługa ABDS nie odpowiada',
       offlineBody: 'Panel działa, ale dane statusu i akcje wymagają uruchomionej usługi Windows.',
       pipe: 'Lokalne IPC',
       startService: 'Uruchom usługę',
@@ -80,6 +82,8 @@ const dictionaries = {
       unknown: 'Nieprzetestowana',
       writable: 'zapis OK',
       kind: 'Typ celu',
+      source: 'Źródło',
+      target: 'Cel',
       retestOk: 'Test lokalizacji zakończony powodzeniem',
       retestFailed: 'Test lokalizacji nie powiódł się'
     },
@@ -95,7 +99,6 @@ const dictionaries = {
       title: 'Synchronizacja',
       desc: 'Zarządzanie parami źródło-cel i trybem porównywania plików.',
       addPair: 'Dodaj parę',
-      filter: 'Filtruj ścieżki',
       all: 'Wszystko',
       errors: 'Błędy',
       inProgress: 'W toku',
@@ -123,6 +126,9 @@ const dictionaries = {
       emptyBody: 'Dodaj folder źródłowy oraz katalog snapshotów.',
       addTitle: 'Dodaj backup',
       editTitle: 'Edytuj backup',
+      name: 'Nazwa',
+      duplicateName: 'Nazwa backupu musi być unikalna.',
+      nameRequired: 'Nazwa backupu jest wymagana.',
       sourcePath: 'Folder źródłowy',
       rootPath: 'Folder backupów'
     },
@@ -135,7 +141,17 @@ const dictionaries = {
       autoSync: 'Auto sync',
       syncInterval: 'Interwał synchronizacji',
       autoBackup: 'Auto backup',
-      backupInterval: 'Interwał backupu',
+      backupSchedule: 'Harmonogram backupu',
+      backupScheduleMode: 'Tryb harmonogramu',
+      weekly: 'Tydzień',
+      monthly: 'Miesiąc',
+      backupTime: 'Godzina backupu',
+      weekdays: 'Dni tygodnia',
+      monthDays: 'Dni miesiąca',
+      compression: 'Kompresja backupu',
+      archiveFormat: 'Format archiwum',
+      compressionLevel: 'Poziom kompresji',
+      compressionLevels: ['Brak kompresji', 'Najszybsza', 'Optymalna', 'Najmniejszy plik'],
       comparison: 'Porównywanie plików',
       comparisonMode: 'Tryb porównywania',
       hashThreshold: 'Hash poniżej (MB)',
@@ -146,13 +162,14 @@ const dictionaries = {
       syncOnExit: 'Sync przy wyjściu z aplikacji',
       startupWithWindows: 'Startuj razem z Windows',
       systemPaths: 'Ścieżki systemowe',
-      saved: 'Ustawienia zapisane'
+      saved: 'Ustawienia zapisane',
+      weekdaysShort: ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
     },
     diagnostics: {
       title: 'Diagnostyka',
       desc: 'Stan lokalnego połączenia, IPC i plików w ProgramData.',
       windowsService: 'Usługa Windows',
-      connected: 'Połączona',
+      connected: 'Aktywna',
       ipc: 'IPC',
       dumps: 'Dumpy błędów'
     },
@@ -192,12 +209,14 @@ const dictionaries = {
     modes: ['Tylko metadane', 'Hash poniżej limitu', 'Hash wszystkiego']
   },
   en: {
-    appSubtitle: 'local safety net',
+    appSubtitle: 'local safety backup',
     common: {
       close: 'Close',
       copy: 'Copy',
       copied: 'Copied to clipboard',
-      retest: 'Retest',
+      browse: 'Browse',
+      browseFallback: 'Paste folder path',
+      retest: 'Test',
       save: 'Save',
       cancel: 'Cancel',
       edit: 'Edit',
@@ -219,10 +238,10 @@ const dictionaries = {
       settings: ['Settings', 'Schedule and behavior']
     },
     connection: {
-      connecting: 'Connecting',
-      connected: 'Service connected',
-      offline: 'Offline',
-      offlineTitle: 'No connection to ABDS service',
+      connecting: 'Checking service',
+      connected: 'Local service active',
+      offline: 'Service unavailable',
+      offlineTitle: 'ABDS service is not responding',
       offlineBody: 'The panel is running, but status data and actions require the Windows service.',
       pipe: 'Local IPC',
       startService: 'Start service',
@@ -272,6 +291,8 @@ const dictionaries = {
       unknown: 'Not tested',
       writable: 'write OK',
       kind: 'Destination type',
+      source: 'Source',
+      target: 'Target',
       retestOk: 'Destination test passed',
       retestFailed: 'Destination test failed'
     },
@@ -287,7 +308,6 @@ const dictionaries = {
       title: 'Synchronization',
       desc: 'Manage source-target pairs and file comparison mode.',
       addPair: 'Add pair',
-      filter: 'Filter paths',
       all: 'All',
       errors: 'Errors',
       inProgress: 'Running',
@@ -315,6 +335,9 @@ const dictionaries = {
       emptyBody: 'Add source folder and snapshot directory.',
       addTitle: 'Add backup',
       editTitle: 'Edit backup',
+      name: 'Name',
+      duplicateName: 'Backup name must be unique.',
+      nameRequired: 'Backup name is required.',
       sourcePath: 'Source folder',
       rootPath: 'Backup folder'
     },
@@ -327,7 +350,17 @@ const dictionaries = {
       autoSync: 'Auto sync',
       syncInterval: 'Sync interval',
       autoBackup: 'Auto backup',
-      backupInterval: 'Backup interval',
+      backupSchedule: 'Backup schedule',
+      backupScheduleMode: 'Schedule mode',
+      weekly: 'Week',
+      monthly: 'Month',
+      backupTime: 'Backup time',
+      weekdays: 'Weekdays',
+      monthDays: 'Month days',
+      compression: 'Backup compression',
+      archiveFormat: 'Archive format',
+      compressionLevel: 'Compression level',
+      compressionLevels: ['No compression', 'Fastest', 'Optimal', 'Smallest file'],
       comparison: 'File comparison',
       comparisonMode: 'Comparison mode',
       hashThreshold: 'Hash below (MB)',
@@ -338,13 +371,14 @@ const dictionaries = {
       syncOnExit: 'Sync on app exit',
       startupWithWindows: 'Start with Windows',
       systemPaths: 'System paths',
-      saved: 'Settings saved'
+      saved: 'Settings saved',
+      weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     },
     diagnostics: {
       title: 'Diagnostics',
       desc: 'Local connection, IPC and ProgramData files.',
       windowsService: 'Windows service',
-      connected: 'Connected',
+      connected: 'Active',
       ipc: 'IPC',
       dumps: 'Failure dumps'
     },
@@ -404,9 +438,13 @@ const state = {
   startup: null,
   recentRuns: [],
   currentRunId: null,
+  syncStatusFilter: getPreference('abds-sync-status-filter') || 'all',
   language: getPreference('abds-language') || 'pl',
   theme: getPreference('abds-theme') || 'system'
 };
+
+const pathBrowseRequests = new Map();
+const recentPathsKey = 'abds-recent-paths';
 
 const els = {
   sideNav: document.getElementById('sideNav'),
@@ -450,6 +488,11 @@ async function init() {
 
 function wireGlobalActions() {
   document.body.addEventListener('click', handleDocumentClick);
+  document.body.addEventListener('change', handleDocumentChange);
+  document.body.addEventListener('input', handlePathInput);
+  document.body.addEventListener('focusin', handlePathFocus);
+  document.body.addEventListener('focusout', () => setTimeout(closePathSuggestions, 140));
+  window.chrome?.webview?.addEventListener?.('message', handleHostMessage);
   els.themeSelect.addEventListener('change', () => {
     state.theme = els.themeSelect.value;
     setPreference('abds-theme', state.theme);
@@ -476,11 +519,18 @@ function handleDocumentClick(event) {
   if (target.dataset.tab) selectTab(target.dataset.tab);
   if (target.dataset.closeModal !== undefined) els.taskModal.close();
   if (target.dataset.closeEdit !== undefined) els.editModal.close();
-  if (target.dataset.copyPath) copyPath(target.dataset.copyPath);
+  if (target.dataset.browsePath !== undefined) browseForPath(target);
+  if (target.dataset.pathSuggestion) usePathSuggestion(target);
   if (target.dataset.openRun) openTaskModal(target.dataset.openRun);
   if (target.dataset.cancelRun) cancelRun(target.dataset.cancelRun);
   if (target.dataset.headerAction) handleHeaderAction(target.dataset.headerAction);
+  if (target.dataset.syncStatusFilter) {
+    state.syncStatusFilter = target.dataset.syncStatusFilter;
+    setPreference('abds-sync-status-filter', state.syncStatusFilter);
+    renderSyncPanel();
+  }
   if (target.dataset.serviceAction) runServiceAction(target.dataset.serviceAction);
+  if (target.dataset.retestSyncSource) retestSyncDestination(target.dataset.retestSyncSource, target.dataset.retestSyncTarget);
   if (target.dataset.retestDestination) retestDestination(target.dataset.retestDestination);
   if (target.dataset.runUrl) runAction(target.dataset.runUrl);
   if (target.dataset.editSync) openSyncEditor(Number(target.dataset.editSync));
@@ -492,6 +542,10 @@ function handleDocumentClick(event) {
       : { sourcePath: target.dataset.source, backupRootPath: target.dataset.target };
     runAction(target.dataset.actionType === 'sync' ? '/api/actions/sync/pair' : '/api/actions/backup/source', body);
   }
+}
+
+function handleDocumentChange(event) {
+  if (event.target?.name === 'backupScheduleMode') updateBackupScheduleVisibility();
 }
 
 function handleHeaderAction(action) {
@@ -557,6 +611,145 @@ function applyTheme() {
   const dark = state.theme === 'dark' || (state.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', dark);
   els.themeSelect.value = state.theme;
+  notifyHostTheme(dark);
+}
+
+function notifyHostTheme(dark) {
+  window.chrome?.webview?.postMessage?.({ type: 'abds-theme', dark });
+}
+
+function handleHostMessage(event) {
+  const message = event.data;
+  if (!message || message.type !== 'abds-folder-selected')
+    return;
+
+  const field = pathBrowseRequests.get(message.requestId);
+  pathBrowseRequests.delete(message.requestId);
+  if (!field || !message.path)
+    return;
+
+  applyPathValue(field, message.path);
+}
+
+function browseForPath(button) {
+  const field = button.closest('[data-path-input-wrap]')?.querySelector('[data-path-input="true"]');
+  if (!field)
+    return;
+
+  const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  pathBrowseRequests.set(requestId, field);
+
+  if (window.chrome?.webview?.postMessage) {
+    window.chrome.webview.postMessage({
+      type: 'abds-browse-folder',
+      requestId,
+      currentPath: getCurrentPathText(field)
+    });
+    return;
+  }
+
+  const manualPath = window.prompt(t('common.browseFallback'), getCurrentPathText(field));
+  if (manualPath)
+    applyPathValue(field, manualPath);
+}
+
+function handlePathInput(event) {
+  const field = event.target.closest?.('[data-path-input="true"]');
+  if (field)
+    renderPathSuggestions(field);
+}
+
+function handlePathFocus(event) {
+  const field = event.target.closest?.('[data-path-input="true"]');
+  if (field)
+    renderPathSuggestions(field);
+}
+
+function usePathSuggestion(button) {
+  const field = button.closest('[data-path-input-wrap]')?.querySelector('[data-path-input="true"]');
+  if (field)
+    applyPathValue(field, button.dataset.pathSuggestion);
+}
+
+function applyPathValue(field, path) {
+  const cleanPath = String(path || '').trim();
+  if (!cleanPath)
+    return;
+
+  if (field.dataset.multiline === 'true') {
+    const existing = field.value.split('\n').map(x => x.trim()).filter(Boolean);
+    if (!existing.some(x => x.toLowerCase() === cleanPath.toLowerCase()))
+      existing.push(cleanPath);
+    field.value = existing.join('\n');
+  }
+  else {
+    field.value = cleanPath;
+  }
+
+  rememberPaths([cleanPath]);
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  field.dispatchEvent(new Event('change', { bubbles: true }));
+  renderPathSuggestions(field);
+  field.focus();
+}
+
+function renderPathSuggestions(field) {
+  const host = field.closest('[data-path-input-wrap]')?.querySelector('[data-path-suggestions]');
+  if (!host)
+    return;
+
+  const term = getCurrentPathText(field).toLowerCase();
+  const suggestions = getRecentPaths()
+    .filter(path => !term || path.toLowerCase().includes(term))
+    .slice(0, 8);
+
+  host.classList.toggle('hidden', suggestions.length === 0);
+  host.classList.toggle('flex', suggestions.length > 0);
+  host.innerHTML = suggestions.map(path => `
+    <button type="button" data-path-suggestion="${escapeAttr(path)}" class="max-w-full truncate rounded-md border border-outline bg-surface px-2 py-1 font-mono text-xs text-muted hover:bg-surface-high">
+      ${escapeHtml(path)}
+    </button>
+  `).join('');
+}
+
+function closePathSuggestions() {
+  document.querySelectorAll('[data-path-suggestions]').forEach(node => {
+    node.classList.add('hidden');
+    node.classList.remove('flex');
+  });
+}
+
+function getCurrentPathText(field) {
+  if (field.dataset.multiline !== 'true')
+    return field.value.trim();
+
+  const lines = field.value.split('\n');
+  return (lines.at(-1) || '').trim();
+}
+
+function getRecentPaths() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(recentPathsKey) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+  }
+  catch {
+    return [];
+  }
+}
+
+function rememberPaths(paths) {
+  const incoming = paths.map(path => String(path || '').trim()).filter(Boolean);
+  if (!incoming.length)
+    return;
+
+  const combined = [...incoming, ...getRecentPaths()];
+  const unique = [];
+  for (const path of combined) {
+    if (!unique.some(existing => existing.toLowerCase() === path.toLowerCase()))
+      unique.push(path);
+  }
+
+  localStorage.setItem(recentPathsKey, JSON.stringify(unique.slice(0, 12)));
 }
 
 async function refreshStatus() {
@@ -604,6 +797,25 @@ async function retestDestination(location) {
     state.config = response.config || response.Config || state.config;
     const result = response.result || response.Result;
     showToast((result?.available && result?.writable) ? t('destination.retestOk') : t('destination.retestFailed'), (result?.available && result?.writable) ? 'ok' : 'danger');
+    renderAll();
+  } catch {
+    showToast(t('destination.retestFailed'), 'danger');
+  }
+}
+
+async function retestSyncDestination(sourcePath, targetPath) {
+  showToast(t('common.loading'));
+  try {
+    const response = await fetchJson('/api/destinations/retest-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourcePath, targetPath })
+    });
+    state.config = response.config || response.Config || state.config;
+    const sourceResult = response.sourceResult || response.SourceResult;
+    const targetResult = response.targetResult || response.TargetResult;
+    const ok = Boolean(sourceResult?.available && targetResult?.available && targetResult?.writable);
+    showToast(ok ? t('destination.retestOk') : t('destination.retestFailed'), ok ? 'ok' : 'danger');
     renderAll();
   } catch {
     showToast(t('destination.retestFailed'), 'danger');
@@ -763,27 +975,36 @@ function statusRow(row, type) {
 function renderSyncPanel() {
   const config = state.config || {};
   const pairs = config.syncPairs || [];
+  const filteredPairs = pairs.filter((pair) => {
+    if (state.syncStatusFilter === 'enabled') return Boolean(pair.enabled);
+    if (state.syncStatusFilter === 'errors') return pairHasSyncError(pair);
+    return true;
+  });
   panelEl('sync').innerHTML = `
     ${sectionHeader(t('sync.title'), t('sync.desc'), [['add', t('sync.addPair'), 'sync-add'], ['sync', t('actions.syncAll'), 'sync-all']])}
     <div class="rounded-lg border border-outline bg-surface">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline bg-surface-low p-4">
-        <input id="syncFilter" class="w-full rounded-md border-outline bg-background text-sm sm:w-80" placeholder="${escapeAttr(t('sync.filter'))}" />
+      <div class="flex flex-wrap items-center justify-end gap-3 border-b border-outline bg-surface-low p-4">
         <div class="flex rounded-md border border-outline bg-background p-1 text-sm">
-          <button class="rounded bg-secondary px-3 py-1 font-bold text-slate-950">${t('sync.all')}</button>
-          <button class="px-3 py-1 text-muted">${t('common.enabled')}</button>
-          <button class="px-3 py-1 text-muted">${t('sync.errors')}</button>
+          ${syncFilterButton('all', t('sync.all'))}
+          ${syncFilterButton('enabled', t('common.enabled'))}
+          ${syncFilterButton('errors', t('sync.errors'))}
         </div>
       </div>
-      <div class="divide-y divide-outline">
-        ${pairs.length ? pairs.map(syncPairCard).join('') : emptyState('sync_disabled', t('sync.emptyTitle'), t('sync.emptyBody'))}
+      <div class="space-y-4 bg-surface-low p-4">
+        ${filteredPairs.length ? filteredPairs.map((pair) => syncPairCard(pair, pairs.indexOf(pair))).join('') : emptyState('sync_disabled', t('sync.emptyTitle'), t('sync.emptyBody'))}
       </div>
     </div>
   `;
 }
 
+function syncFilterButton(filter, label) {
+  const active = state.syncStatusFilter === filter;
+  return `<button data-sync-status-filter="${filter}" class="rounded px-3 py-1 font-semibold ${active ? 'bg-secondary text-slate-950' : 'text-muted hover:bg-surface-high'}">${label}</button>`;
+}
+
 function syncPairCard(pair, index) {
   return `
-    <article class="grid gap-4 p-5 lg:grid-cols-[1fr_auto]">
+    <article class="grid gap-4 rounded-lg border border-outline bg-surface p-5 shadow-sm ring-1 ring-outline/40 lg:grid-cols-[1fr_auto]">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-3">
           ${togglePill(pair.enabled)}
@@ -798,7 +1019,7 @@ function syncPairCard(pair, index) {
           ${(pair.targetPaths || []).map((path) => pathChip(path)).join('')}
         </div>
         <div class="mt-3 space-y-2">
-          ${(pair.targetPaths || []).map((path) => destinationStatusLine(path, destinationMetaForSync(pair, path))).join('')}
+          ${(pair.targetPaths || []).map((path) => syncDestinationStatusLine(pair, path)).join('')}
         </div>
       </div>
       <div class="flex items-start gap-2">
@@ -845,8 +1066,9 @@ function backupCard(backup, index) {
       <div>
         <div class="flex flex-wrap items-center gap-3">${togglePill(backup.enabled)}${pathChip(backup.sourcePath)}</div>
         <div class="mt-3 grid gap-3 md:grid-cols-3">
+          ${infoBlock(t('backups.name'), backup.name || backup.Name || '-')}
           ${infoBlock(t('table.backupRoot'), backup.backupRootPath, true)}
-          ${infoBlock(t('sync.interval'), formatDuration(state.config?.schedule?.autoBackupIntervalFromLastSuccess))}
+          ${infoBlock(t('settings.backupSchedule'), backupScheduleSummary(state.config?.schedule))}
           ${infoBlock(t('backups.limit'), `${bytesToGb(state.config?.schedule?.maxBackupStorageBytes)} GB`)}
         </div>
         <div class="mt-3">${destinationStatusLine(backup.backupRootPath, backup.backupDestination)}</div>
@@ -869,7 +1091,7 @@ function renderSettingsPanel() {
         ${toggleField(t('settings.autoSync'), 'autoSyncEnabled', schedule.autoSyncEnabled ?? true)}
         ${textField(t('settings.syncInterval'), 'autoSyncInterval', schedule.autoSyncInterval || '00:15:00')}
         ${toggleField(t('settings.autoBackup'), 'autoBackupEnabled', schedule.autoBackupEnabled ?? true)}
-        ${textField(t('settings.backupInterval'), 'autoBackupIntervalFromLastSuccess', schedule.autoBackupIntervalFromLastSuccess || '12:00:00')}
+        ${backupScheduleFields(schedule)}
       `, 'xl:col-span-7')}
       ${settingsCard(t('settings.comparison'), 'compare_arrows', `
         <label class="block text-sm font-semibold text-muted">${t('settings.comparisonMode')}</label>
@@ -879,6 +1101,20 @@ function renderSettingsPanel() {
           ${modeOption(2, t('modes')[2], schedule.syncComparisonMode)}
         </select>
         ${textField(t('settings.hashThreshold'), 'hashBelowSizeMbThreshold', schedule.hashBelowSizeMbThreshold ?? 20)}
+      `, 'xl:col-span-5')}
+      ${settingsCard(t('settings.compression'), 'inventory_2', `
+        <label class="block text-sm font-semibold text-muted">${t('settings.archiveFormat')}</label>
+        <select name="backupArchiveFormat" class="mt-2 w-full rounded-md border-outline bg-background">
+          ${option(0, 'ZIP', schedule.backupArchiveFormat, 0)}
+          ${option(1, 'TAR.GZ', schedule.backupArchiveFormat, 0)}
+        </select>
+        <label class="block text-sm font-semibold text-muted">${t('settings.compressionLevel')}</label>
+        <select name="backupCompressionPreset" class="mt-2 w-full rounded-md border-outline bg-background">
+          ${option(0, t('settings.compressionLevels')[0], schedule.backupCompressionPreset, 2)}
+          ${option(1, t('settings.compressionLevels')[1], schedule.backupCompressionPreset, 2)}
+          ${option(2, t('settings.compressionLevels')[2], schedule.backupCompressionPreset, 2)}
+          ${option(3, t('settings.compressionLevels')[3], schedule.backupCompressionPreset, 2)}
+        </select>
       `, 'xl:col-span-5')}
       ${settingsCard(t('settings.retentionStart'), 'storage', `
         ${textField(t('settings.maxBackupGb'), 'maxBackupStorageGb', bytesToGb(schedule.maxBackupStorageBytes))}
@@ -895,6 +1131,7 @@ function renderSettingsPanel() {
       `, 'xl:col-span-6')}
     </form>
   `;
+  updateBackupScheduleVisibility();
 }
 
 function renderActionsPanel() {
@@ -956,7 +1193,7 @@ async function runAction(url, body = null) {
     });
     showToast(t('actions.queued'));
     const runId = value(result, 'runId', 'RunId');
-    if (runId) openTaskModal(runId);
+    if (runId) state.currentRunId = runId;
     await refreshStatus();
   } catch {
     showToast(t('actions.actionFailed'), 'danger');
@@ -1032,7 +1269,15 @@ async function saveSettings() {
   config.schedule.syncOnAppStart = data.get('syncOnAppStart') === 'on';
   config.schedule.syncOnAppExit = data.get('syncOnAppExit') === 'on';
   config.schedule.autoSyncInterval = String(data.get('autoSyncInterval') || '00:15:00');
-  config.schedule.autoBackupIntervalFromLastSuccess = String(data.get('autoBackupIntervalFromLastSuccess') || '12:00:00');
+  config.schedule.backupScheduleMode = String(data.get('backupScheduleMode') || 'weekly');
+  config.schedule.backupScheduleTime = String(data.get('backupScheduleTime') || '04:00');
+  config.schedule.backupScheduleWeekDays = data.getAll('backupScheduleWeekDays').map(Number).filter(Number.isFinite);
+  config.schedule.backupScheduleMonthDays = data.getAll('backupScheduleMonthDays').map(Number).filter(Number.isFinite);
+  if (!config.schedule.backupScheduleWeekDays.length) config.schedule.backupScheduleWeekDays = [1];
+  if (!config.schedule.backupScheduleMonthDays.length) config.schedule.backupScheduleMonthDays = [1];
+  config.schedule.autoBackupIntervalFromLastSuccess ??= '12:00:00';
+  config.schedule.backupArchiveFormat = Number(data.get('backupArchiveFormat') || 0);
+  config.schedule.backupCompressionPreset = Number(data.get('backupCompressionPreset') ?? 2);
   config.schedule.syncComparisonMode = Number(data.get('syncComparisonMode') || 1);
   config.schedule.hashBelowSizeMbThreshold = Number(data.get('hashBelowSizeMbThreshold') || 20);
   config.schedule.maxBackupStorageBytes = Number(data.get('maxBackupStorageGb') || 300) * 1024 * 1024 * 1024;
@@ -1065,6 +1310,7 @@ function openSyncEditor(index = null) {
     event.preventDefault();
     const form = new FormData(els.editModalBody);
     const next = { sourcePath: String(form.get('sourcePath') || ''), targetPaths: String(form.get('targetPaths') || '').split('\n').map(x => x.trim()).filter(Boolean), enabled: form.get('enabled') === 'on' };
+    rememberPaths([next.sourcePath, ...next.targetPaths]);
     state.config.syncPairs ??= [];
     if (index === null) state.config.syncPairs.push(next);
     else state.config.syncPairs[index] = next;
@@ -1077,9 +1323,10 @@ function openSyncEditor(index = null) {
 
 function openBackupEditor(index = null) {
   state.config ??= { syncPairs: [], backupSources: [], schedule: {} };
-  const backup = index === null ? { sourcePath: '', backupRootPath: '', enabled: true } : state.config.backupSources[index];
+  const backup = index === null ? { name: '', sourcePath: '', backupRootPath: '', enabled: true } : state.config.backupSources[index];
   els.editModalTitle.textContent = index === null ? t('backups.addTitle') : t('backups.editTitle');
   els.editModalBody.innerHTML = `
+    ${textInput(t('backups.name'), 'name', backup.name || backup.Name || '')}
     ${textInput(t('backups.sourcePath'), 'sourcePath', backup.sourcePath, false, true)}
     ${textInput(t('backups.rootPath'), 'backupRootPath', backup.backupRootPath, false, true)}
     ${checkInput(t('common.enabled'), 'enabled', backup.enabled)}
@@ -1088,7 +1335,16 @@ function openBackupEditor(index = null) {
   els.editModalBody.onsubmit = async (event) => {
     event.preventDefault();
     const form = new FormData(els.editModalBody);
-    const next = { sourcePath: String(form.get('sourcePath') || ''), backupRootPath: String(form.get('backupRootPath') || ''), enabled: form.get('enabled') === 'on' };
+    const next = { name: String(form.get('name') || '').trim(), sourcePath: String(form.get('sourcePath') || ''), backupRootPath: String(form.get('backupRootPath') || ''), enabled: form.get('enabled') === 'on' };
+    if (!next.name) {
+      showToast(t('backups.nameRequired'), 'danger');
+      return;
+    }
+    if (!isBackupNameUnique(next.name, index)) {
+      showToast(t('backups.duplicateName'), 'danger');
+      return;
+    }
+    rememberPaths([next.sourcePath, next.backupRootPath]);
     state.config.backupSources ??= [];
     if (index === null) state.config.backupSources.push(next);
     else state.config.backupSources[index] = next;
@@ -1102,20 +1358,6 @@ function openBackupEditor(index = null) {
 async function saveConfigOnly() {
   state.config = await fetchJson('/api/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state.config) });
   showToast(t('settings.saved'));
-}
-
-async function copyPath(path) {
-  try {
-    await navigator.clipboard.writeText(path);
-  } catch {
-    const input = document.createElement('textarea');
-    input.value = path;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand('copy');
-    input.remove();
-  }
-  showToast(`${t('common.copied')}: ${path}`);
 }
 
 function showToast(message, tone = 'ok') {
@@ -1170,6 +1412,56 @@ function settingsCard(title, icon, content, cols) {
   return `<section class="${cols} rounded-lg border border-outline bg-surface p-5"><div class="mb-4 flex items-center gap-2 border-b border-outline pb-3"><span class="material-symbols-outlined text-primary">${icon}</span><h2 class="font-display text-lg font-semibold">${title}</h2></div><div class="space-y-4">${content}</div></section>`;
 }
 
+function backupScheduleFields(schedule) {
+  const mode = schedule.backupScheduleMode || schedule.BackupScheduleMode || 'weekly';
+  const time = schedule.backupScheduleTime || schedule.BackupScheduleTime || '04:00';
+  const weekDays = schedule.backupScheduleWeekDays || schedule.BackupScheduleWeekDays || [1];
+  const monthDays = schedule.backupScheduleMonthDays || schedule.BackupScheduleMonthDays || [1];
+  const weekOrder = [1, 2, 3, 4, 5, 6, 0];
+  return `
+    <div class="rounded-lg border border-outline bg-background p-3">
+      <div class="text-sm font-semibold text-muted">${t('settings.backupScheduleMode')}</div>
+      <div class="mt-3 grid gap-2 sm:grid-cols-2">
+        ${radioPill('backupScheduleMode', 'weekly', t('settings.weekly'), mode === 'weekly')}
+        ${radioPill('backupScheduleMode', 'monthly', t('settings.monthly'), mode === 'monthly')}
+      </div>
+    </div>
+    <label class="block">
+      <span class="text-sm font-semibold text-muted">${t('settings.backupTime')}</span>
+      <input name="backupScheduleTime" type="time" value="${escapeAttr(time)}" class="mt-2 w-full rounded-md border-outline bg-background font-mono text-sm">
+    </label>
+    <div data-backup-schedule-section="weekly" class="rounded-lg border border-outline bg-background p-3">
+      <div class="mb-3 text-sm font-semibold text-muted">${t('settings.weekdays')}</div>
+      <div class="grid grid-cols-3 gap-2 sm:grid-cols-7">
+        ${weekOrder.map((day) => checkboxPill('backupScheduleWeekDays', day, t('settings.weekdaysShort')[day], weekDays.map(Number).includes(day))).join('')}
+      </div>
+    </div>
+    <div data-backup-schedule-section="monthly" class="rounded-lg border border-outline bg-background p-3">
+      <div class="mb-3 text-sm font-semibold text-muted">${t('settings.monthDays')}</div>
+      <div class="grid grid-cols-7 gap-2 sm:grid-cols-10">
+        ${Array.from({ length: 31 }, (_, i) => i + 1).map((day) => checkboxPill('backupScheduleMonthDays', day, String(day), monthDays.map(Number).includes(day))).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function radioPill(name, valueText, label, checked) {
+  return `<label class="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-outline px-3 py-2 text-sm font-semibold has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary"><input name="${name}" value="${valueText}" type="radio" class="sr-only" ${checked ? 'checked' : ''}>${label}</label>`;
+}
+
+function checkboxPill(name, valueText, label, checked) {
+  return `<label class="flex cursor-pointer items-center justify-center rounded-md border border-outline px-2 py-2 text-sm font-semibold has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary"><input name="${name}" value="${valueText}" type="checkbox" class="sr-only" ${checked ? 'checked' : ''}>${label}</label>`;
+}
+
+function updateBackupScheduleVisibility() {
+  const form = document.getElementById('settingsForm');
+  if (!form) return;
+  const mode = new FormData(form).get('backupScheduleMode') || 'weekly';
+  document.querySelectorAll('[data-backup-schedule-section]').forEach((section) => {
+    section.classList.toggle('hidden', section.dataset.backupScheduleSection !== mode);
+  });
+}
+
 function actionCard(icon, title, description, url) {
   return `<article class="rounded-lg border border-outline bg-surface p-5"><span class="material-symbols-outlined text-4xl text-primary">${icon}</span><h2 class="mt-3 font-display text-xl font-semibold">${title}</h2><p class="mt-2 text-sm text-muted">${description}</p><button data-run-url="${url}" class="mt-5 rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950">${t('common.run')}</button></article>`;
 }
@@ -1194,10 +1486,19 @@ function textField(label, name, valueText) {
   return `<label class="block"><span class="text-sm font-semibold text-muted">${label}</span><input name="${name}" value="${escapeAttr(valueText ?? '')}" class="mt-2 w-full rounded-md border-outline bg-background font-mono text-sm"></label>`;
 }
 
-function textInput(label, name, valueText, multiline = false, copy = false) {
-  const common = `name="${name}" class="w-full rounded-md border-outline bg-background font-mono text-sm"`;
+function textInput(label, name, valueText, multiline = false, browse = false) {
+  const common = `name="${name}" data-path-input="${browse ? 'true' : 'false'}" data-multiline="${multiline ? 'true' : 'false'}" class="w-full rounded-md border-outline bg-background font-mono text-sm" autocomplete="off"`;
   const control = multiline ? `<textarea ${common} rows="4">${escapeHtml(valueText || '')}</textarea>` : `<input ${common} value="${escapeAttr(valueText || '')}">`;
-  return `<label class="block"><span class="text-sm font-semibold text-muted">${label}</span><div class="mt-2 flex gap-2">${control}${copy ? copyButton(valueText || '') : ''}</div></label>`;
+  return `
+    <div class="block" data-path-input-wrap>
+      <span class="text-sm font-semibold text-muted">${label}</span>
+      <div class="mt-2 flex gap-2">
+        ${control}
+        ${browse ? `<button type="button" data-browse-path class="shrink-0 rounded-md border border-outline px-3 py-2 text-sm font-semibold hover:bg-surface-high">${t('common.browse')}</button>` : ''}
+      </div>
+      ${browse ? '<div data-path-suggestions class="mt-2 hidden flex-wrap gap-2"></div>' : ''}
+    </div>
+  `;
 }
 
 function checkInput(label, name, checked) {
@@ -1217,11 +1518,7 @@ function pathList(title, paths, color = '') {
 }
 
 function pathChip(path) {
-  return `<span class="inline-flex max-w-full items-center gap-2 rounded-md border border-outline bg-background px-2 py-1 font-mono text-xs text-muted"><span class="truncate">${escapeHtml(path || '-')}</span>${copyButton(path || '')}</span>`;
-}
-
-function copyButton(path) {
-  return `<button type="button" data-copy-path="${escapeAttr(path)}" class="shrink-0 rounded border border-outline px-1.5 py-0.5 text-[11px] font-sans text-content hover:bg-surface-high" title="${escapeAttr(t('common.copy'))}">${t('common.copy')}</button>`;
+  return `<span class="inline-flex max-w-full items-center rounded-md border border-outline bg-background px-2 py-1 font-mono text-xs text-muted"><span class="truncate">${escapeHtml(path || '-')}</span></span>`;
 }
 
 function smallStat(label, text) {
@@ -1272,7 +1569,41 @@ function destinationMetaForSync(pair, path) {
   return locations[path] || Object.entries(locations).find(([key]) => key.toLowerCase() === String(path).toLowerCase())?.[1] || null;
 }
 
-function destinationStatusLine(location, endpoint) {
+function pairHasSyncError(pair) {
+  const source = String(pair.sourcePath || pair.SourcePath || '');
+  const targets = pair.targetPaths || pair.TargetPaths || [];
+  const statusRows = value(state.status || {}, 'syncStatuses', 'SyncStatuses') || [];
+  const hasFailedRun = statusRows.some((row) => {
+    const rowSource = String(value(row, 'sourcePath', 'SourcePath') || '');
+    const rowTarget = String(value(row, 'targetPath', 'TargetPath') || '');
+    const rowState = String(value(row, 'lastState', 'LastState') || '').toLowerCase();
+    return rowSource.toLowerCase() === source.toLowerCase()
+      && targets.some((target) => String(target).toLowerCase() === rowTarget.toLowerCase())
+      && ['failed', 'partiallydone', 'retrywaiting'].includes(rowState);
+  });
+  if (hasFailedRun) return true;
+  const sourceProbe = sourceMetaForSync(pair)?.lastProbe || sourceMetaForSync(pair)?.LastProbe;
+  if (sourceProbe && !(value(sourceProbe, 'available', 'Available') && value(sourceProbe, 'writable', 'Writable'))) return true;
+  return targets.some((target) => {
+    const probe = destinationMetaForSync(pair, target)?.lastProbe || destinationMetaForSync(pair, target)?.LastProbe;
+    return probe && !(value(probe, 'available', 'Available') && value(probe, 'writable', 'Writable'));
+  });
+}
+
+function sourceMetaForSync(pair) {
+  return pair.sourceLocation || pair.SourceLocation || null;
+}
+
+function syncDestinationStatusLine(pair, targetPath) {
+  return `
+    <div class="space-y-2 rounded-md border border-outline bg-background p-2">
+      ${destinationStatusLine(pair.sourcePath, sourceMetaForSync(pair), { role: t('destination.source'), sourcePath: pair.sourcePath, targetPath })}
+      ${destinationStatusLine(targetPath, destinationMetaForSync(pair, targetPath), { role: t('destination.target'), sourcePath: pair.sourcePath, targetPath })}
+    </div>
+  `;
+}
+
+function destinationStatusLine(location, endpoint, options = {}) {
   const probe = endpoint?.lastProbe || endpoint?.LastProbe || null;
   const identity = endpoint?.identity || endpoint?.Identity || probe?.identity || probe?.Identity || null;
   const kind = endpoint?.kind ?? endpoint?.Kind ?? probe?.kind ?? probe?.Kind ?? 'Unknown';
@@ -1281,22 +1612,39 @@ function destinationStatusLine(location, endpoint) {
   const error = value(probe, 'diagnosticDetails', 'DiagnosticDetails') || value(probe, 'errorMessage', 'ErrorMessage') || '';
   const fingerprint = value(identity, 'fingerprint', 'Fingerprint');
   const title = [error, fingerprint ? `ID: ${fingerprint}` : null].filter(Boolean).join('\n');
-  const cls = ok === null ? 'border-outline text-muted' : ok ? 'border-success text-success' : 'border-warning text-warning';
+  const cls = ok === null ? 'border-outline text-muted' : ok ? 'border-primary text-primary' : 'border-warning text-warning';
+  const button = options.sourcePath && options.targetPath
+    ? `<button data-retest-sync-source="${escapeAttr(options.sourcePath)}" data-retest-sync-target="${escapeAttr(options.targetPath)}" class="rounded-md border border-outline px-2 py-1 text-xs">${t('common.retest')}</button>`
+    : `<button data-retest-destination="${escapeAttr(location)}" class="rounded-md border border-outline px-2 py-1 text-xs">${t('common.retest')}</button>`;
   return `
     <div class="flex flex-wrap items-center gap-2 rounded-md border border-outline bg-background p-2 text-xs">
+      ${options.role ? `<span class="font-semibold text-muted">${escapeHtml(options.role)}:</span>` : ''}
+      <span class="max-w-full truncate font-mono text-muted">${escapeHtml(location)}</span>
       <span title="${escapeAttr(title)}" class="inline-flex items-center gap-1 rounded-md border px-2 py-1 font-semibold ${cls}">
         <span class="material-symbols-outlined text-[16px]">${ok ? 'check_circle' : ok === false ? 'warning' : 'help'}</span>
         ${text}
       </span>
       <span class="text-muted">${t('destination.kind')}: ${escapeHtml(String(kind))}</span>
       <span class="font-mono text-muted">${escapeHtml(formatDate(value(probe, 'testedAt', 'TestedAt')))}</span>
-      <button data-retest-destination="${escapeAttr(location)}" class="rounded-md border border-outline px-2 py-1 text-xs">${t('common.retest')}</button>
+      ${button}
     </div>
   `;
 }
 
 function modeOption(valueNumber, label, current) {
   return `<option value="${valueNumber}" ${Number(current ?? 1) === valueNumber ? 'selected' : ''}>${label}</option>`;
+}
+
+function option(valueNumber, label, current, defaultValue = 0) {
+  return `<option value="${valueNumber}" ${Number(current ?? defaultValue) === valueNumber ? 'selected' : ''}>${label}</option>`;
+}
+
+function isBackupNameUnique(name, currentIndex = null) {
+  const normalized = name.trim().toLowerCase();
+  return (state.config?.backupSources || []).every((backup, index) => {
+    if (currentIndex !== null && index === currentIndex) return true;
+    return String(backup.name || backup.Name || '').trim().toLowerCase() !== normalized;
+  });
 }
 
 function panelEl(id) { return document.querySelector(`[data-panel="${id}"]`); }
@@ -1322,6 +1670,17 @@ function formatDuration(input) {
   if (h >= 24) return `${Math.round(h / 24)} d`;
   if (h > 0) return `${h}h`;
   return `${m} min`;
+}
+function backupScheduleSummary(schedule = {}) {
+  const mode = schedule.backupScheduleMode || schedule.BackupScheduleMode || 'weekly';
+  const time = schedule.backupScheduleTime || schedule.BackupScheduleTime || '04:00';
+  if (mode === 'monthly') {
+    const days = schedule.backupScheduleMonthDays || schedule.BackupScheduleMonthDays || [1];
+    return `${t('settings.monthly')}: ${days.join(', ')} ${time}`;
+  }
+  const days = schedule.backupScheduleWeekDays || schedule.BackupScheduleWeekDays || [1];
+  const names = t('settings.weekdaysShort');
+  return `${t('settings.weekly')}: ${days.map((day) => names[Number(day)] || day).join(', ')} ${time}`;
 }
 function durationToHours(input) {
   const [h] = String(input || '02:00:00').split(':').map(Number);

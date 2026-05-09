@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.ServiceProcess;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -26,6 +27,7 @@ public sealed class MainForm : Form
     private Process? _webHostProcess;
     private CancellationTokenSource? _pipeCts;
     private bool _webViewReady;
+    private bool _darkWindowTheme = true;
 
     public MainForm(string pipeName, string? runId)
     {
@@ -37,11 +39,15 @@ public sealed class MainForm : Form
         Height = 840;
         MinimumSize = new Size(1024, 700);
         StartPosition = FormStartPosition.CenterScreen;
+        RestoreWindowPlacement();
 
         Controls.Add(_webView);
         Controls.Add(_statusLabel);
 
         Shown += async (_, _) => await InitializeAsync();
+        Move += (_, _) => SaveWindowPlacement();
+        ResizeEnd += (_, _) => SaveWindowPlacement();
+        FormClosing += (_, _) => SaveWindowPlacement();
         FormClosed += (_, _) =>
         {
             _pipeCts?.Cancel();
@@ -63,8 +69,10 @@ public sealed class MainForm : Form
             await EnsureWebHostAsync();
 
             SetStatus("Ładowanie UI...");
-            await _webView.EnsureCoreWebView2Async();
+            var webViewEnvironment = await CreateWebViewEnvironmentAsync();
+            await _webView.EnsureCoreWebView2Async(webViewEnvironment);
             ConfigureWebView(_webView.CoreWebView2);
+            ConfigureWebViewMessages(_webView.CoreWebView2);
             _webView.Source = new Uri(BuildStartUrl());
             _webViewReady = true;
             StartCommandPipe();
@@ -78,6 +86,20 @@ public sealed class MainForm : Form
         }
     }
 
+    private static async Task<CoreWebView2Environment> CreateWebViewEnvironmentAsync()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
+            localAppData = Path.GetTempPath();
+
+        var userDataFolder = Path.Combine(localAppData, "ABDS", "WebView2");
+        Directory.CreateDirectory(userDataFolder);
+
+        return await CoreWebView2Environment.CreateAsync(
+            browserExecutableFolder: null,
+            userDataFolder: userDataFolder);
+    }
+
     private static void ConfigureWebView(CoreWebView2 core)
     {
         core.Settings.AreDevToolsEnabled = false;
@@ -85,6 +107,70 @@ public sealed class MainForm : Form
         core.Settings.AreBrowserAcceleratorKeysEnabled = false;
         core.Settings.IsStatusBarEnabled = false;
         core.Settings.IsZoomControlEnabled = true;
+    }
+
+    private void ConfigureWebViewMessages(CoreWebView2 core)
+    {
+        core.WebMessageReceived += (_, args) =>
+        {
+            try
+            {
+                using var payload = JsonDocument.Parse(args.WebMessageAsJson);
+                var root = payload.RootElement;
+                if (!root.TryGetProperty("type", out var type))
+                    return;
+
+                switch (type.GetString())
+                {
+                    case "abds-theme":
+                        if (root.TryGetProperty("dark", out var dark) && dark.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                            ApplyWindowTheme(dark.GetBoolean());
+                        break;
+                    case "abds-browse-folder":
+                        HandleBrowseFolderMessage(core, root);
+                        break;
+                }
+            }
+            catch
+            {
+                // WebView messages are convenience features; ignore malformed payloads.
+            }
+        };
+    }
+
+    private void HandleBrowseFolderMessage(CoreWebView2 core, JsonElement root)
+    {
+        if (!root.TryGetProperty("requestId", out var requestIdElement))
+            return;
+
+        var requestId = requestIdElement.GetString();
+        if (string.IsNullOrWhiteSpace(requestId))
+            return;
+
+        var currentPath = root.TryGetProperty("currentPath", out var currentPathElement)
+            ? currentPathElement.GetString()
+            : null;
+
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "Wskaż folder dla ABDS",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true
+        };
+
+        if (!string.IsNullOrWhiteSpace(currentPath) && Directory.Exists(currentPath))
+            dialog.SelectedPath = currentPath;
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        var message = JsonSerializer.Serialize(new
+        {
+            type = "abds-folder-selected",
+            requestId,
+            path = dialog.SelectedPath
+        });
+        core.PostWebMessageAsJson(message);
     }
 
     private string BuildStartUrl()
@@ -345,6 +431,123 @@ public sealed class MainForm : Form
         _statusLabel.Text = message;
     }
 
+    private void ApplyWindowTheme(bool dark)
+    {
+        _darkWindowTheme = dark;
+        if (!IsHandleCreated)
+            return;
+
+        try
+        {
+            var darkMode = dark ? 1 : 0;
+            DwmSetWindowAttribute(Handle, DwmwaUseImmersiveDarkMode, ref darkMode, sizeof(int));
+
+            var caption = dark ? Rgb(17, 24, 39) : Rgb(245, 247, 251);
+            var text = dark ? Rgb(241, 245, 249) : Rgb(15, 23, 42);
+            DwmSetWindowAttribute(Handle, DwmwaCaptionColor, ref caption, sizeof(int));
+            DwmSetWindowAttribute(Handle, DwmwaTextColor, ref text, sizeof(int));
+        }
+        catch
+        {
+            // Older Windows builds may not support these DWM attributes.
+        }
+    }
+
+    private static int Rgb(byte red, byte green, byte blue)
+    {
+        return red | (green << 8) | (blue << 16);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyWindowTheme(_darkWindowTheme);
+    }
+
+    private void RestoreWindowPlacement()
+    {
+        var placement = LoadWindowPlacement();
+        if (placement is null)
+            return;
+
+        var bounds = new Rectangle(placement.Left, placement.Top, placement.Width, placement.Height);
+        if (bounds.Width < MinimumSize.Width || bounds.Height < MinimumSize.Height || !IsVisibleOnAnyScreen(bounds))
+            return;
+
+        StartPosition = FormStartPosition.Manual;
+        Bounds = bounds;
+
+        if (placement.WindowState is FormWindowState.Maximized or FormWindowState.Normal)
+            WindowState = placement.WindowState;
+    }
+
+    private void SaveWindowPlacement()
+    {
+        try
+        {
+            if (WindowState == FormWindowState.Minimized)
+                return;
+
+            var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+            if (bounds.Width < MinimumSize.Width || bounds.Height < MinimumSize.Height)
+                return;
+
+            var placement = new WindowPlacement(
+                bounds.Left,
+                bounds.Top,
+                bounds.Width,
+                bounds.Height,
+                WindowState);
+
+            var path = GetWindowPlacementPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, JsonSerializer.Serialize(placement, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch
+        {
+            // Window placement is a convenience setting; startup and shutdown should not depend on it.
+        }
+    }
+
+    private static WindowPlacement? LoadWindowPlacement()
+    {
+        try
+        {
+            var path = GetWindowPlacementPath();
+            return File.Exists(path)
+                ? JsonSerializer.Deserialize<WindowPlacement>(File.ReadAllText(path))
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string GetWindowPlacementPath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
+            localAppData = Path.GetTempPath();
+
+        return Path.Combine(localAppData, "ABDS", "window-state.json");
+    }
+
+    private static bool IsVisibleOnAnyScreen(Rectangle bounds)
+    {
+        return Screen.AllScreens.Any(screen => Rectangle.Intersect(screen.WorkingArea, bounds).Width >= 120
+            && Rectangle.Intersect(screen.WorkingArea, bounds).Height >= 80);
+    }
+
+    private sealed record WindowPlacement(int Left, int Top, int Width, int Height, FormWindowState WindowState);
+
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    private const int DwmwaUseImmersiveDarkMode = 20;
+    private const int DwmwaCaptionColor = 35;
+    private const int DwmwaTextColor = 36;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int attributeValue, int attributeSize);
 }

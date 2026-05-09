@@ -30,7 +30,7 @@
           <img src="/assets/icon.png" alt="ABDS" class="h-10 w-10 rounded-lg" />
           <div>
             <h1 class="font-display text-2xl font-semibold text-content">ABDS System</h1>
-            <p class="mt-1 font-mono text-xs text-primary">local safety net</p>
+            <p class="mt-1 font-mono text-xs text-primary">local safety backup</p>
           </div>
         </div>
       </div>
@@ -39,7 +39,7 @@
         <div class="flex items-center gap-3">
           <span id="navStatusDot" class="h-2.5 w-2.5 rounded-full bg-warning"></span>
           <div>
-            <div id="navStatusText" class="text-sm font-semibold">Łączenie</div>
+            <div id="navStatusText" class="text-sm font-semibold">Sprawdzanie usługi</div>
               <div class="font-mono text-xs text-muted">ABDS_PIPE_V1</div>
           </div>
         </div>
@@ -66,13 +66,13 @@
           <div class="flex flex-wrap items-center gap-2">
             <span id="connectionBadge" class="inline-flex items-center gap-2 rounded-md border border-outline bg-surface px-3 py-2 text-sm font-semibold">
               <span class="h-2 w-2 rounded-full bg-warning"></span>
-              <span data-i18n="connection.connecting">Łączenie</span>
+              <span data-i18n="connection.connecting">Sprawdzanie usługi</span>
             </span>
-            <button id="syncAllBtn" class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950 glow-primary">
+            <button id="syncAllBtn" class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-bold text-white dark:text-slate-950 glow-primary">
               <span class="material-symbols-outlined text-[18px]">sync</span>
               <span data-i18n="actions.syncNow">Synchronizuj teraz</span>
             </button>
-            <button id="backupAllBtn" class="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm font-bold text-slate-950 glow-secondary">
+            <button id="backupAllBtn" class="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm font-bold text-white dark:text-slate-950 glow-secondary">
               <span class="material-symbols-outlined text-[18px]">backup</span>
               <span data-i18n="actions.backupNow">Backup teraz</span>
             </button>
@@ -95,7 +95,7 @@
           <div class="flex items-start gap-3">
             <span class="material-symbols-outlined">report_problem</span>
             <div>
-              <div class="font-semibold" data-i18n="connection.offlineTitle">Brak połączenia z usługą ABDS</div>
+              <div class="font-semibold" data-i18n="connection.offlineTitle">Usługa ABDS nie odpowiada</div>
               <div class="mt-1 text-sm" data-i18n="connection.offlineBody">Panel działa, ale dane statusu i akcje wymagają uruchomionej usługi Windows.</div>
               <div id="serviceActions" class="mt-3 flex flex-wrap gap-2"></div>
             </div>

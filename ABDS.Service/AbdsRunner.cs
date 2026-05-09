@@ -181,10 +181,17 @@ public sealed class AbdsRunner
         runCtx.Commit();
 
         long copied = 0;
+        var sourceConfig = cfg.BackupSources.FirstOrDefault(source =>
+            StringComparer.OrdinalIgnoreCase.Equals(source.SourcePath, job.SourcePath) &&
+            StringComparer.OrdinalIgnoreCase.Equals(source.BackupRootPath, job.BackupRoot));
+        var backupName = sourceConfig?.Name;
 
         await BackupEngine.RunBackupAsync(
             job.SourcePath,
             job.BackupRoot!,
+            backupName ?? new DirectoryInfo(job.SourcePath).Name,
+            cfg.Schedule.BackupArchiveFormat,
+            cfg.Schedule.BackupCompressionPreset,
             cfg.Schedule.MaxBackupStorageBytes,
             ct,
             m => Log(runCtx, "INFO", m),

@@ -5,15 +5,18 @@ using ABDS.Core.IO;
 using ABDS.Core.Models;
 using ABDS.Core.Sync;
 using ABDS.Service;
+using System.IO.Compression;
 
 var tests = new (string Name, Func<Task> Body)[]
 {
     ("SyncPlanner plans missing and changed files", SyncPlannerPlansMissingAndChangedFiles),
     ("Hash cache persists entries", HashCachePersistsEntries),
-    ("BackupEngine creates timestamped snapshot", BackupEngineCreatesTimestampedSnapshot),
+    ("BackupEngine creates compressed archive", BackupEngineCreatesCompressedArchive),
+    ("BackupEngine honors tar gz format", BackupEngineHonorsTarGzFormat),
     ("FileCopyWithRetry copies atomically", FileCopyWithRetryCopiesAtomically),
     ("HashBelowSize detects content changes when metadata matches", HashBelowSizeDetectsContentChangesWhenMetadataMatches),
     ("State store returns recent runs newest first", StateStoreReturnsRecentRunsNewestFirst),
+    ("State store schedules backup by weekly calendar", StateStoreSchedulesBackupByWeeklyCalendar),
     ("Destination probe writes reads and deletes local target", DestinationProbeWritesReadsAndDeletesLocalTarget),
 };
 
@@ -91,7 +94,7 @@ static async Task HashCachePersistsEntries()
     AssertEqual("ABCDEF", value);
 }
 
-static async Task BackupEngineCreatesTimestampedSnapshot()
+static async Task BackupEngineCreatesCompressedArchive()
 {
     using var scope = TempScope.Create();
     var source = scope.CreateDirectory("source");
@@ -105,6 +108,9 @@ static async Task BackupEngineCreatesTimestampedSnapshot()
     await BackupEngine.RunBackupAsync(
         source,
         backupRoot,
+        "CAD_Main",
+        BackupArchiveFormat.Zip,
+        BackupCompressionPreset.Optimal,
         maxStorageBytes: 1024 * 1024,
         CancellationToken.None,
         _ => Task.CompletedTask,
@@ -116,10 +122,34 @@ static async Task BackupEngineCreatesTimestampedSnapshot()
             return Task.CompletedTask;
         });
 
-    var snapshots = Directory.GetDirectories(backupRoot);
-    AssertEqual(1, snapshots.Length);
-    AssertTrue(File.Exists(Path.Combine(snapshots[0], "nested", "model.dwg")));
+    var archives = Directory.GetFiles(backupRoot, "*_CAD_Main.zip");
+    AssertEqual(1, archives.Length);
+    using var archive = ZipFile.OpenRead(archives[0]);
+    AssertTrue(archive.Entries.Any(entry => entry.FullName.Replace('\\', '/') == "nested/model.dwg"));
     AssertEqual(new FileInfo(file).Length, copied);
+}
+
+static async Task BackupEngineHonorsTarGzFormat()
+{
+    using var scope = TempScope.Create();
+    var source = scope.CreateDirectory("source");
+    var backupRoot = scope.CreateDirectory("backups");
+
+    await File.WriteAllTextAsync(Path.Combine(source, "model.txt"), "cad data");
+
+    await BackupEngine.RunBackupAsync(
+        source,
+        backupRoot,
+        "CAD_Main",
+        BackupArchiveFormat.TarGz,
+        BackupCompressionPreset.Fastest,
+        maxStorageBytes: 1024 * 1024,
+        CancellationToken.None,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask);
+
+    AssertEqual(1, Directory.GetFiles(backupRoot, "*_CAD_Main.tar.gz").Length);
 }
 
 static async Task FileCopyWithRetryCopiesAtomically()
@@ -168,6 +198,33 @@ static async Task StateStoreReturnsRecentRunsNewestFirst()
     AssertEqual(2, runs.Count);
     AssertEqual("newer-run", runs[0].RunId);
     AssertEqual("older-run", runs[1].RunId);
+}
+
+static Task StateStoreSchedulesBackupByWeeklyCalendar()
+{
+    var store = new AbdsStateStore();
+    var cfg = new AbdsConfig
+    {
+        Schedule = new AbdsScheduleConfig
+        {
+            AutoSyncEnabled = false,
+            AutoBackupEnabled = true,
+            BackupScheduleMode = "weekly",
+            BackupScheduleTime = "04:00",
+            BackupScheduleWeekDays = new() { 1 }
+        },
+        BackupSources = new()
+        {
+            new BackupSource("D:\\SourceA", "F:\\Backups") { Name = "SourceA" }
+        }
+    };
+
+    var next = store.DecideNextJob(cfg, new DateTimeOffset(2026, 5, 11, 4, 5, 0, TimeSpan.Zero));
+
+    AssertTrue(next is not null);
+    AssertEqual(AbdsTaskType.Backup, next!.Type);
+    AssertEqual("scheduled", next.Reason);
+    return Task.CompletedTask;
 }
 
 static async Task DestinationProbeWritesReadsAndDeletesLocalTarget()
