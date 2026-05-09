@@ -9,12 +9,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>..\..\src\ABDS.DesktopHost\Resources\icon.ico</ApplicationIcon>
+    <ApplicationIcon>..\..\ABDS.DesktopHost\Resources\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="..\install.ps1" LogicalName="install.ps1" />
-    <EmbeddedResource Include="..\..\artifacts\installer-input\payload.zip" LogicalName="payload.zip" />
+    <EmbeddedResource Include="..\..\..\artifacts\installer-input\payload.zip" LogicalName="payload.zip" />
   </ItemGroup>
 
 </Project>

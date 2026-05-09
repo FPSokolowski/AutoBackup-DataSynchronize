@@ -460,6 +460,7 @@ function wireGlobalActions() {
     setPreference('abds-language', state.language);
     document.documentElement.lang = state.language;
     applyTranslations();
+    setConnection(state.connected);
     renderNavigation();
     renderAll();
   });
