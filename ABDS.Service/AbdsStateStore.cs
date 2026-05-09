@@ -261,30 +261,31 @@ public sealed class AbdsStateStore
             // Backup overdue rules
             if (cfg.Schedule.AutoBackupEnabled)
             {
+                var backupOccurrence = GetLatestBackupOccurrence(cfg.Schedule, now);
                 foreach (var b in _state.BackupStatuses.Values)
                 {
                     var lastOk = b.LastSuccessAt;
-                    var interval = cfg.Schedule.AutoBackupIntervalFromLastSuccess;
 
-                    if (lastOk is null)
+                    if (backupOccurrence.HasValue && lastOk is null)
                     {
                         warning = true;
                         issues.Add($"BACKUP: brak udanego backupu: {b.SourcePath}");
                         continue;
                     }
 
-                    var overdue = now - lastOk.Value;
-                    var criticalThreshold = interval + cfg.CriticalBackupOverdueExtra;
-
-                    if (overdue > criticalThreshold)
+                    if (backupOccurrence.HasValue && lastOk.HasValue && lastOk.Value < backupOccurrence.Value)
                     {
-                        critical = true;
-                        issues.Add($"BACKUP CRITICAL: {b.SourcePath} (overdue {overdue})");
-                    }
-                    else if (overdue > interval)
-                    {
-                        warning = true;
-                        issues.Add($"BACKUP WARNING: {b.SourcePath} (overdue {overdue})");
+                        var overdue = now - backupOccurrence.Value;
+                        if (overdue > cfg.CriticalBackupOverdueExtra)
+                        {
+                            critical = true;
+                            issues.Add($"BACKUP CRITICAL: {b.SourcePath} (overdue {overdue})");
+                        }
+                        else
+                        {
+                            warning = true;
+                            issues.Add($"BACKUP WARNING: {b.SourcePath} (overdue {overdue})");
+                        }
                     }
 
                     if (b.LastState is "Failed")
@@ -375,18 +376,56 @@ public sealed class AbdsStateStore
 
             if (cfg.Schedule.AutoBackupEnabled)
             {
+                var backupOccurrence = GetLatestBackupOccurrence(cfg.Schedule, now);
                 foreach (var src in cfg.BackupSources.Where(b => b.Enabled))
                 {
                     var key = AbdsServiceState.BackupKey(src.SourcePath, src.BackupRootPath);
                     _state.BackupStatuses.TryGetValue(key, out var st);
 
-                    if (st?.LastSuccessAt is null || ( now - st.LastSuccessAt.Value ) > cfg.Schedule.AutoBackupIntervalFromLastSuccess)
-                        return AbdsJobRequest.Backup(src.SourcePath, src.BackupRootPath, reason: "interval");
+                    if (backupOccurrence.HasValue && (st?.LastSuccessAt is null || st.LastSuccessAt.Value < backupOccurrence.Value))
+                        return AbdsJobRequest.Backup(src.SourcePath, src.BackupRootPath, reason: "scheduled");
                 }
             }
 
             return null;
         }
+    }
+
+    private static DateTimeOffset? GetLatestBackupOccurrence(AbdsScheduleConfig schedule, DateTimeOffset now)
+    {
+        var time = ParseBackupTime(schedule.BackupScheduleTime);
+        for (var offsetDays = 0; offsetDays <= 370; offsetDays++)
+        {
+            var date = now.Date.AddDays(-offsetDays);
+            if (!IsBackupDateSelected(schedule, date))
+                continue;
+
+            var occurrence = new DateTimeOffset(date.Year, date.Month, date.Day, time.Hours, time.Minutes, 0, now.Offset);
+            if (occurrence <= now)
+                return occurrence;
+        }
+
+        return null;
+    }
+
+    private static bool IsBackupDateSelected(AbdsScheduleConfig schedule, DateTime date)
+    {
+        if (string.Equals(schedule.BackupScheduleMode, "monthly", StringComparison.OrdinalIgnoreCase))
+        {
+            var days = schedule.BackupScheduleMonthDays.Count > 0 ? schedule.BackupScheduleMonthDays : [1];
+            return days.Contains(date.Day);
+        }
+
+        var weekDays = schedule.BackupScheduleWeekDays.Count > 0 ? schedule.BackupScheduleWeekDays : [1];
+        return weekDays.Contains((int)date.DayOfWeek);
+    }
+
+    private static TimeSpan ParseBackupTime(string? value)
+    {
+        if (TimeSpan.TryParse(value, out var time))
+            return time;
+
+        return TimeSpan.FromHours(4);
     }
 
     // Per-path status update

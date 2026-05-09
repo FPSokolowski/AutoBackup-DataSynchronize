@@ -8,8 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ABDS.Core\ABDS.Core.csproj" />
-    <ProjectReference Include="..\..\src\ABDS.Service\ABDS.Service.csproj" />
+    <ProjectReference Include="..\..\ABDS.Core\ABDS.Core.csproj" />
+    <ProjectReference Include="..\..\ABDS.Service\ABDS.Service.csproj" />
+    <ProjectReference Include="..\..\ABDS.SharedIpc\ABDS.SharedIpc.csproj" />
   </ItemGroup>
 
 </Project>

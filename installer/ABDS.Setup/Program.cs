@@ -17,10 +17,13 @@ internal static class Program
             ExtractResource("payload.zip", Path.Combine(tempDir, "payload.zip"));
 
             var installScript = Path.Combine(tempDir, "install.ps1");
+            var appVersion = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "0.1.0";
             var process = Process.Start(new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{installScript}\"",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{installScript}\" -AppVersion \"{appVersion}\"",
                 UseShellExecute = true,
                 Verb = "runas"
             });

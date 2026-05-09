@@ -28,6 +28,7 @@ window.navigator.clipboard = {
   writeText: async (value) => { clipboardText = value; },
 };
 window.alert = () => {};
+window.prompt = () => 'D:\\PickedFolder';
 window.fetch = async (url, options = {}) => {
   fetchCalls.push({ url: String(url), method: options.method || 'GET', body: options.body || null });
   if (url === '/api/config') {
@@ -37,7 +38,7 @@ window.fetch = async (url, options = {}) => {
     return jsonResponse({
       serviceTickMinutes: 5,
       syncPairs: [{ sourcePath: 'D:\\CADProjects', targetPaths: ['E:\\Sync1'], enabled: true }],
-      backupSources: [{ sourcePath: 'D:\\CADProjects', backupRootPath: 'F:\\Backups', enabled: true }],
+      backupSources: [{ name: 'CADProjects', sourcePath: 'D:\\CADProjects', backupRootPath: 'F:\\Backups', enabled: true }],
       schedule: {
         autoSyncEnabled: true,
         autoSyncInterval: '00:15:00',
@@ -45,6 +46,12 @@ window.fetch = async (url, options = {}) => {
         hashBelowSizeMbThreshold: 20,
         autoBackupEnabled: true,
         autoBackupIntervalFromLastSuccess: '12:00:00',
+        backupScheduleMode: 'weekly',
+        backupScheduleTime: '04:00',
+        backupScheduleWeekDays: [1],
+        backupScheduleMonthDays: [1],
+        backupArchiveFormat: 0,
+        backupCompressionPreset: 2,
         syncOnAppStart: true,
         syncOnAppExit: false,
         maxBackupStorageBytes: 322122547200,
@@ -127,6 +134,11 @@ assert.match(window.document.body.textContent, /Status systemu/);
 click('[data-tab="sync"]');
 assert.equal(window.document.querySelector('[data-panel="sync"]').classList.contains('hidden'), false);
 assert.match(window.document.body.textContent, /D:\\CADProjects/);
+assert.equal(window.document.querySelector('#syncFilter'), null);
+click('[data-sync-status-filter="errors"]');
+assert.match(window.document.body.textContent, /No sync pairs|Brak par synchronizacji/);
+click('[data-sync-status-filter="all"]');
+assert.match(window.document.body.textContent, /D:\\CADProjects/);
 
 window.document.querySelector('#languageSelect').value = 'en';
 window.document.querySelector('#languageSelect').dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -141,17 +153,17 @@ window.document.querySelector('#themeSelect').value = 'light';
 window.document.querySelector('#themeSelect').dispatchEvent(new window.Event('change', { bubbles: true }));
 assert.equal(window.document.documentElement.classList.contains('dark'), false);
 
-click('[data-copy-path]');
+assert.equal(window.document.querySelector('[data-copy-path]'), null);
+click('[data-header-action="sync-add"]');
+assert.equal(window.document.querySelector('#editModal').open, true);
+click('[data-browse-path]');
 await settle();
-assert.notEqual(clipboardText, '');
-assert.match(window.document.body.textContent, /Copied to clipboard/);
+assert.equal(window.document.querySelector('[name="sourcePath"]').value, 'D:\\PickedFolder');
+window.document.querySelector('#editModal').close();
 
 click('#syncAllBtn');
 await settle();
 assert(fetchCalls.some((call) => call.url === '/api/actions/sync/all' && call.method === 'POST'));
-assert.equal(window.document.querySelector('#taskModal').open, true);
-
-click('[data-close-modal]');
 assert.equal(window.document.querySelector('#taskModal').open, false);
 
 click('[data-header-action="sync-add"]');
@@ -161,12 +173,15 @@ window.document.querySelector('[name="targetPaths"]').value = 'E:\\NewTarget';
 window.document.querySelector('#editModalBody').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
 await settle();
 assert(fetchCalls.some((call) => call.url === '/api/config' && call.method === 'PUT'));
+assert.match(window.localStorage.getItem('abds-recent-paths'), /D:\\\\NewSource/);
 
 click('[data-tab="settings"]');
 click('[data-header-action="settings-save"]');
 await settle();
 assert(fetchCalls.filter((call) => call.url === '/api/config' && call.method === 'PUT').length >= 2);
 assert(fetchCalls.some((call) => call.url === '/api/windows/startup' && call.method === 'PUT'));
+const settingsSave = fetchCalls.filter((call) => call.url === '/api/config' && call.method === 'PUT').at(-1);
+assert.equal(JSON.parse(settingsSave.body).schedule.backupScheduleTime, '04:00');
 
 console.log('web-ui smoke passed');
 window.close();

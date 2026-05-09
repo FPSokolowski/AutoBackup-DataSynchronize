@@ -6,6 +6,7 @@ public sealed record SyncPair(
     bool Enabled = true
 )
 {
+    public DestinationEndpoint? SourceLocation { get; init; }
     public Dictionary<string, DestinationEndpoint> TargetLocations { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
@@ -15,6 +16,8 @@ public sealed record BackupSource(
     bool Enabled = true
 )
 {
+    public string Name { get; init; } = "";
+    public DestinationEndpoint? SourceLocation { get; init; }
     public DestinationEndpoint? BackupDestination { get; init; }
 }
 
@@ -75,6 +78,12 @@ public sealed record AbdsScheduleConfig
     public bool AutoBackupEnabled { get; init; } = true;
     public TimeSpan AutoBackupIntervalFromLastSuccess { get; init; }
         = TimeSpan.FromHours(12);
+    public string BackupScheduleMode { get; init; } = "weekly";
+    public string BackupScheduleTime { get; init; } = "04:00";
+    public List<int> BackupScheduleWeekDays { get; init; } = new() { 1 };
+    public List<int> BackupScheduleMonthDays { get; init; } = new() { 1 };
+    public BackupArchiveFormat BackupArchiveFormat { get; init; } = BackupArchiveFormat.Zip;
+    public BackupCompressionPreset BackupCompressionPreset { get; init; } = BackupCompressionPreset.Optimal;
 
     public bool SyncOnAppStart { get; init; } = true;
     public bool SyncOnAppExit { get; init; } = false;

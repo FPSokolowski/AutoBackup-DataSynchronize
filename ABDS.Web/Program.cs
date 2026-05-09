@@ -14,6 +14,7 @@ builder.Services.AddSingleton(new AbdsServiceControl("ABDS (AutoBackup & DataSyn
 var jsonOptions = new JsonSerializerOptions
 {
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
     WriteIndented = true
 };
 
@@ -24,12 +25,17 @@ app.UseStaticFiles();
 
 app.MapGet("/api/config", async (AbdsWebPaths paths, CancellationToken ct) =>
 {
-    var config = await LoadConfigAsync(paths, ct);
+    var config = await LoadConfigAsync(paths, jsonOptions, ct);
     return Results.Json(config, jsonOptions);
 });
 
 app.MapPut("/api/config", async (AbdsConfig config, AbdsWebPaths paths, CancellationToken ct) =>
 {
+    config = NormalizeBackupNames(config);
+    var validationError = ValidateConfig(config);
+    if (validationError is not null)
+        return Results.BadRequest(new { message = validationError });
+
     config = await DestinationConfigService.ProbeConfiguredDestinationsAsync(config, ct);
     await SaveConfigAsync(config, paths, jsonOptions, ct);
     return Results.Json(config, jsonOptions);
@@ -43,11 +49,22 @@ app.MapPost("/api/destinations/probe", async (DestinationProbeRequest request, C
 
 app.MapPost("/api/destinations/retest", async (DestinationProbeRequest request, AbdsWebPaths paths, CancellationToken ct) =>
 {
-    var config = await LoadConfigAsync(paths, ct);
+    var config = await LoadConfigAsync(paths, jsonOptions, ct);
     var result = await DestinationProbe.ProbeAsync(request.Location, writeTest: true, ct);
     config = DestinationConfigService.ApplyProbeResult(config, result);
     await SaveConfigAsync(config, paths, jsonOptions, ct);
     return Results.Json(new DestinationRetestResponse(result, config), jsonOptions);
+});
+
+app.MapPost("/api/destinations/retest-sync", async (SyncDestinationRetestRequest request, AbdsWebPaths paths, CancellationToken ct) =>
+{
+    var config = await LoadConfigAsync(paths, jsonOptions, ct);
+    var sourceResult = await DestinationProbe.ProbeAsync(request.SourcePath, writeTest: false, ct);
+    var targetResult = await DestinationProbe.ProbeAsync(request.TargetPath, writeTest: true, ct);
+    config = DestinationConfigService.ApplyProbeResult(config, sourceResult);
+    config = DestinationConfigService.ApplyProbeResult(config, targetResult);
+    await SaveConfigAsync(config, paths, jsonOptions, ct);
+    return Results.Json(new SyncDestinationRetestResponse(sourceResult, targetResult, config), jsonOptions);
 });
 
 app.MapGet("/api/diagnostics/paths", (AbdsWebPaths paths) => Results.Json(new
@@ -187,7 +204,48 @@ static bool LooksLikeJson(string value)
     return trimmed.StartsWith('{') || trimmed.StartsWith('[');
 }
 
-static async Task<AbdsConfig> LoadConfigAsync(AbdsWebPaths paths, CancellationToken ct)
+static string? ValidateConfig(AbdsConfig config)
+{
+    var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var backup in config.BackupSources)
+    {
+        if (string.IsNullOrWhiteSpace(backup.Name))
+            return "Backup source name is required.";
+
+        if (!names.Add(backup.Name.Trim()))
+            return $"Backup source name must be unique: {backup.Name}";
+    }
+
+    return null;
+}
+
+static AbdsConfig NormalizeBackupNames(AbdsConfig config)
+{
+    var used = config.BackupSources
+        .Select(backup => backup.Name?.Trim())
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var backups = config.BackupSources.Select((backup, index) =>
+    {
+        if (!string.IsNullOrWhiteSpace(backup.Name))
+            return backup with { Name = backup.Name.Trim() };
+
+        var name = !string.IsNullOrWhiteSpace(backup.SourcePath)
+            ? Path.GetFileName(backup.SourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            : $"Backup {index + 1}";
+        name = string.IsNullOrWhiteSpace(name) ? $"Backup {index + 1}" : name.Trim();
+        var candidate = name;
+        var suffix = 2;
+        while (!used.Add(candidate))
+            candidate = $"{name} {suffix++}";
+
+        return backup with { Name = candidate };
+    }).ToList();
+
+    return config with { BackupSources = backups };
+}
+
+static async Task<AbdsConfig> LoadConfigAsync(AbdsWebPaths paths, JsonSerializerOptions options, CancellationToken ct)
 {
     Directory.CreateDirectory(paths.RootDir);
 
@@ -199,7 +257,7 @@ static async Task<AbdsConfig> LoadConfigAsync(AbdsWebPaths paths, CancellationTo
     }
 
     var content = await File.ReadAllTextAsync(paths.ConfigPath, ct);
-    return JsonSerializer.Deserialize<AbdsConfig>(content) ?? new AbdsConfig();
+    return JsonSerializer.Deserialize<AbdsConfig>(content, options) ?? new AbdsConfig();
 }
 
 static async Task SaveConfigAsync(AbdsConfig config, AbdsWebPaths paths, JsonSerializerOptions options, CancellationToken ct)
@@ -224,6 +282,8 @@ public sealed record SyncPairRequest(string SourcePath, string TargetPath);
 public sealed record BackupSourceRequest(string SourcePath, string BackupRootPath);
 public sealed record DestinationProbeRequest(string Location);
 public sealed record DestinationRetestResponse(DestinationProbeResult Result, AbdsConfig Config);
+public sealed record SyncDestinationRetestRequest(string SourcePath, string TargetPath);
+public sealed record SyncDestinationRetestResponse(DestinationProbeResult SourceResult, DestinationProbeResult TargetResult, AbdsConfig Config);
 public sealed record StartupSettingRequest(bool Enabled);
 public sealed record StartupSettingDto(bool Enabled, string RunValueName, string? TrayAgentPath, string? Message);
 
@@ -360,12 +420,18 @@ public static class DestinationConfigService
             foreach (var target in pair.TargetPaths.Where(t => StringComparer.OrdinalIgnoreCase.Equals(t, result.Location)))
                 locations[target] = EndpointFromResult(result);
 
-            return pair with { TargetLocations = locations };
+            var source = StringComparer.OrdinalIgnoreCase.Equals(pair.SourcePath, result.Location)
+                ? EndpointFromResult(result)
+                : pair.SourceLocation;
+
+            return pair with { SourceLocation = source, TargetLocations = locations };
         }).ToList();
 
         var backups = config.BackupSources.Select(backup =>
             StringComparer.OrdinalIgnoreCase.Equals(backup.BackupRootPath, result.Location)
                 ? backup with { BackupDestination = EndpointFromResult(result) }
+                : StringComparer.OrdinalIgnoreCase.Equals(backup.SourcePath, result.Location)
+                    ? backup with { SourceLocation = EndpointFromResult(result) }
                 : backup).ToList();
 
         return config with { SyncPairs = pairs, BackupSources = backups };

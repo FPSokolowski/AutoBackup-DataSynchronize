@@ -1,5 +1,7 @@
 param(
-    [string]$InstallDir = "$env:ProgramFiles\ABDS"
+    [string]$InstallDir = "$env:ProgramFiles\ABDS",
+    [string]$AppVersion = "0.1.0",
+    [switch]$AllowDowngrade
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,8 +23,12 @@ if (-not (Test-Admin)) {
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-File", "`"$PSCommandPath`"",
-        "-InstallDir", "`"$InstallDir`""
+        "-InstallDir", "`"$InstallDir`"",
+        "-AppVersion", "`"$AppVersion`""
     )
+    if ($AllowDowngrade) {
+        $args += "-AllowDowngrade"
+    }
     Start-Process -FilePath "powershell.exe" -ArgumentList $args -Verb RunAs
     exit
 }
@@ -57,9 +63,37 @@ function Create-Shortcut([string]$path, [string]$target, [string]$arguments, [st
     $shortcut.Save()
 }
 
+function Convert-ToComparableVersion([string]$value) {
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return $null
+    }
+
+    $core = ($value.Trim() -split '[-+]')[0]
+    $parts = @($core.Split('.') | ForEach-Object {
+        $n = 0
+        if ([int]::TryParse($_, [ref]$n)) { $n } else { 0 }
+    })
+    while ($parts.Count -lt 4) {
+        $parts += 0
+    }
+
+    return [Version]::new($parts[0], $parts[1], $parts[2], $parts[3])
+}
+
 $payloadZip = Join-Path $PSScriptRoot "payload.zip"
 if (-not (Test-Path -LiteralPath $payloadZip)) {
     throw "Nie znaleziono payload.zip obok instalatora."
+}
+
+$installedVersionText = $null
+if (Test-Path -LiteralPath $uninstallKey) {
+    $installedVersionText = (Get-ItemProperty -Path $uninstallKey -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+}
+
+$installedVersion = Convert-ToComparableVersion $installedVersionText
+$newVersion = Convert-ToComparableVersion $AppVersion
+if ($installedVersion -and $newVersion -and $newVersion -lt $installedVersion -and -not $AllowDowngrade) {
+    throw "Zainstalowana wersja ABDS ($installedVersionText) jest nowsza niż uruchomiony instalator ($AppVersion). Instalacja starszej wersji została zablokowana."
 }
 
 $tempRoot = Join-Path $env:TEMP ("ABDS-Install-" + [Guid]::NewGuid().ToString("N"))
@@ -142,7 +176,7 @@ try {
 
     New-Item -Path $uninstallKey -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name "DisplayName" -Value "ABDS" -PropertyType String -Force | Out-Null
-    New-ItemProperty -Path $uninstallKey -Name "DisplayVersion" -Value "0.1.0" -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $uninstallKey -Name "DisplayVersion" -Value $AppVersion -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name "Publisher" -Value "ABDS" -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name "InstallLocation" -Value $InstallDir -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name "DisplayIcon" -Value $icon -PropertyType String -Force | Out-Null
