@@ -100,6 +100,7 @@ public sealed record AbdsConfig
     public List<BackupSource> BackupSources { get; init; } = new();
 
     public AbdsScheduleConfig Schedule { get; init; } = new();
+    public AbdsUpdateConfig Update { get; init; } = new();
 
     // Retry reguły
     public TimeSpan RetryFailedBackupAfter { get; init; } = TimeSpan.FromMinutes(30);
@@ -109,4 +110,9 @@ public sealed record AbdsConfig
     // Krytyczne przeterminowanie
     public int CriticalSyncOverdueFactor { get; init; } = 2; // 2x interwału
     public TimeSpan CriticalBackupOverdueExtra { get; init; } = TimeSpan.FromHours(2); // interwał + 2h
+}
+
+public sealed record AbdsUpdateConfig
+{
+    public string ManifestUrl { get; init; } = "https://abds.sokolowskifilip.pl/update/version";
 }

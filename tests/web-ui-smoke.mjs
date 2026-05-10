@@ -56,6 +56,9 @@ window.fetch = async (url, options = {}) => {
         syncOnAppExit: false,
         maxBackupStorageBytes: 322122547200,
       },
+      update: {
+        manifestUrl: 'https://abds.sokolowskifilip.pl/update/version',
+      },
       criticalBackupOverdueExtra: '02:00:00',
     });
   }
@@ -102,6 +105,20 @@ window.fetch = async (url, options = {}) => {
   }
   if (String(url).startsWith('/api/actions/')) {
     return jsonResponse({ ok: true, message: 'Scheduled', runId: 'run-123' });
+  }
+  if (url === '/api/update/check') {
+    return jsonResponse({
+      currentVersion: '0.1.0',
+      latestVersion: '0.2.0',
+      runtime: 'win-x64',
+      updateAvailable: true,
+      installerUrl: 'https://updates.example.test/abds/ABDS-Setup-0.2.0-win-x64.exe',
+      releaseNotes: 'Smoke update',
+      message: 'Update available.',
+    });
+  }
+  if (url === '/api/update/install') {
+    return jsonResponse({ started: true, installerPath: 'C:\\Temp\\ABDS-Setup.exe', message: 'Installer started' });
   }
   if (String(url).startsWith('/api/runs/run-123/logs')) {
     return jsonResponse([{ at: '2026-05-06T12:00:00+02:00', level: 'INFO', message: 'Started' }]);
@@ -176,12 +193,19 @@ assert(fetchCalls.some((call) => call.url === '/api/config' && call.method === '
 assert.match(window.localStorage.getItem('abds-recent-paths'), /D:\\\\NewSource/);
 
 click('[data-tab="settings"]');
+click('[data-update-action="check"]');
+await settle();
+assert.match(window.document.body.textContent, /0\.2\.0/);
+click('[data-update-action="install"]');
+await settle();
+assert(fetchCalls.some((call) => call.url === '/api/update/install' && call.method === 'POST'));
 click('[data-header-action="settings-save"]');
 await settle();
 assert(fetchCalls.filter((call) => call.url === '/api/config' && call.method === 'PUT').length >= 2);
 assert(fetchCalls.some((call) => call.url === '/api/windows/startup' && call.method === 'PUT'));
 const settingsSave = fetchCalls.filter((call) => call.url === '/api/config' && call.method === 'PUT').at(-1);
 assert.equal(JSON.parse(settingsSave.body).schedule.backupScheduleTime, '04:00');
+assert.equal(JSON.parse(settingsSave.body).update.manifestUrl, 'https://abds.sokolowskifilip.pl/update/version');
 
 console.log('web-ui smoke passed');
 window.close();

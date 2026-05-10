@@ -4,12 +4,18 @@ using ABDS.Core.Models;
 using ABDS.SharedIpc;
 using System.ServiceProcess;
 using Microsoft.Win32;
+using System.Diagnostics;
+using System.Net.Http.Json;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<AbdsIpcClient>();
 builder.Services.AddSingleton(AbdsWebPaths.Default());
 builder.Services.AddSingleton(new AbdsServiceControl("ABDS (AutoBackup & DataSynchronize)"));
+builder.Services.AddHttpClient();
 
 var jsonOptions = new JsonSerializerOptions
 {
@@ -90,6 +96,23 @@ app.MapGet("/api/windows/startup", () =>
 
 app.MapPut("/api/windows/startup", (StartupSettingRequest request) =>
     Results.Json(WindowsStartupControl.SetEnabled(request.Enabled), jsonOptions));
+
+app.MapGet("/api/update/current", () =>
+    Results.Json(UpdateService.Current(), jsonOptions));
+
+app.MapGet("/api/update/check", async (AbdsWebPaths paths, IHttpClientFactory httpFactory, CancellationToken ct) =>
+{
+    var config = await LoadConfigAsync(paths, jsonOptions, ct);
+    var result = await UpdateService.CheckAsync(ResolveUpdateManifestUrl(config), httpFactory.CreateClient(), ct);
+    return Results.Json(result, jsonOptions);
+});
+
+app.MapPost("/api/update/install", async (AbdsWebPaths paths, IHttpClientFactory httpFactory, CancellationToken ct) =>
+{
+    var config = await LoadConfigAsync(paths, jsonOptions, ct);
+    var result = await UpdateService.DownloadAndLaunchAsync(ResolveUpdateManifestUrl(config), httpFactory.CreateClient(), ct);
+    return Results.Json(result, jsonOptions);
+});
 
 app.MapGet("/api/status", async (AbdsIpcClient ipc, CancellationToken ct) =>
 {
@@ -245,6 +268,11 @@ static AbdsConfig NormalizeBackupNames(AbdsConfig config)
     return config with { BackupSources = backups };
 }
 
+static string ResolveUpdateManifestUrl(AbdsConfig config)
+    => string.IsNullOrWhiteSpace(config.Update.ManifestUrl)
+        ? new AbdsUpdateConfig().ManifestUrl
+        : config.Update.ManifestUrl;
+
 static async Task<AbdsConfig> LoadConfigAsync(AbdsWebPaths paths, JsonSerializerOptions options, CancellationToken ct)
 {
     Directory.CreateDirectory(paths.RootDir);
@@ -286,6 +314,18 @@ public sealed record SyncDestinationRetestRequest(string SourcePath, string Targ
 public sealed record SyncDestinationRetestResponse(DestinationProbeResult SourceResult, DestinationProbeResult TargetResult, AbdsConfig Config);
 public sealed record StartupSettingRequest(bool Enabled);
 public sealed record StartupSettingDto(bool Enabled, string RunValueName, string? TrayAgentPath, string? Message);
+public sealed record UpdateManifest(string Version, string? ReleaseNotes, List<UpdateInstallerAsset> Installers);
+public sealed record UpdateInstallerAsset(string Runtime, string Url, string? Sha256, long? SizeBytes);
+public sealed record UpdateCheckDto(
+    string CurrentVersion,
+    string? LatestVersion,
+    string Runtime,
+    bool UpdateAvailable,
+    string? InstallerUrl,
+    string? ReleaseNotes,
+    string? Message);
+
+public sealed record UpdateInstallDto(bool Started, string? InstallerPath, string Message);
 
 public sealed record AbdsServiceStatusDto(
     bool Installed,
@@ -294,6 +334,142 @@ public sealed record AbdsServiceStatusDto(
     string DisplayName,
     string Status,
     string? Message);
+
+public static class UpdateService
+{
+    public static UpdateCheckDto Current()
+        => new(
+            CurrentVersion(),
+            null,
+            CurrentRuntime(),
+            false,
+            null,
+            null,
+            "Version check has not been run yet.");
+
+    public static async Task<UpdateCheckDto> CheckAsync(string? manifestUrl, HttpClient http, CancellationToken ct)
+    {
+        var currentVersion = CurrentVersion();
+        var runtime = CurrentRuntime();
+        if (string.IsNullOrWhiteSpace(manifestUrl))
+            return new UpdateCheckDto(currentVersion, null, runtime, false, null, null, "Update manifest URL is not configured.");
+
+        UpdateManifest manifest;
+        try
+        {
+            manifest = await FetchManifestAsync(manifestUrl, http, ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        {
+            return new UpdateCheckDto(
+                currentVersion,
+                null,
+                runtime,
+                false,
+                null,
+                null,
+                $"Could not read update manifest: {ex.Message}");
+        }
+
+        var asset = SelectAsset(manifest, runtime);
+        if (asset is null)
+            return new UpdateCheckDto(currentVersion, manifest.Version, runtime, false, null, manifest.ReleaseNotes, $"No installer for {runtime}.");
+
+        var updateAvailable = CompareVersions(manifest.Version, currentVersion) > 0;
+        return new UpdateCheckDto(
+            currentVersion,
+            manifest.Version,
+            runtime,
+            updateAvailable,
+            updateAvailable ? asset.Url : null,
+            manifest.ReleaseNotes,
+            updateAvailable ? "Update available." : "ABDS is up to date.");
+    }
+
+    public static async Task<UpdateInstallDto> DownloadAndLaunchAsync(string? manifestUrl, HttpClient http, CancellationToken ct)
+    {
+        var check = await CheckAsync(manifestUrl, http, ct);
+        if (!check.UpdateAvailable || string.IsNullOrWhiteSpace(check.InstallerUrl))
+            return new UpdateInstallDto(false, null, check.Message ?? "No update available.");
+
+        var manifest = await FetchManifestAsync(manifestUrl!, http, ct);
+        var asset = SelectAsset(manifest, check.Runtime)
+            ?? throw new InvalidOperationException($"No installer for {check.Runtime}.");
+        var updatesDir = Path.Combine(Path.GetTempPath(), "ABDS", "Updates");
+        Directory.CreateDirectory(updatesDir);
+        var fileName = Path.GetFileName(new Uri(asset.Url).LocalPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+            fileName = $"ABDS-Setup-{manifest.Version}-{check.Runtime}.exe";
+        var installerPath = Path.Combine(updatesDir, fileName);
+
+        await using (var source = await http.GetStreamAsync(asset.Url, ct))
+        await using (var target = File.Create(installerPath))
+        {
+            await source.CopyToAsync(target, ct);
+        }
+
+        if (!string.IsNullOrWhiteSpace(asset.Sha256))
+            await VerifySha256Async(installerPath, asset.Sha256, ct);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = installerPath,
+            UseShellExecute = true,
+            Verb = "open"
+        });
+
+        return new UpdateInstallDto(true, installerPath, "Installer downloaded and started.");
+    }
+
+    private static async Task<UpdateManifest> FetchManifestAsync(string manifestUrl, HttpClient http, CancellationToken ct)
+        => await http.GetFromJsonAsync<UpdateManifest>(manifestUrl, cancellationToken: ct)
+           ?? throw new InvalidOperationException("Update manifest is empty or invalid.");
+
+    private static UpdateInstallerAsset? SelectAsset(UpdateManifest manifest, string runtime)
+        => manifest.Installers.FirstOrDefault(asset => StringComparer.OrdinalIgnoreCase.Equals(asset.Runtime, runtime));
+
+    private static string CurrentVersion()
+        => Assembly.GetEntryAssembly()?
+               .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+               .InformationalVersion
+           ?? "0.0.0";
+
+    private static string CurrentRuntime()
+        => RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X86 => "win-x86",
+            Architecture.Arm64 => "win-arm64",
+            _ => "win-x64"
+        };
+
+    private static int CompareVersions(string left, string right)
+    {
+        var leftVersion = ToVersion(left);
+        var rightVersion = ToVersion(right);
+        return leftVersion.CompareTo(rightVersion);
+    }
+
+    private static Version ToVersion(string value)
+    {
+        var core = value.Split('-', '+')[0];
+        var parts = core.Split('.')
+            .Select(part => int.TryParse(part, out var number) ? number : 0)
+            .ToList();
+        while (parts.Count < 4)
+            parts.Add(0);
+
+        return new Version(parts[0], parts[1], parts[2], parts[3]);
+    }
+
+    private static async Task VerifySha256Async(string filePath, string expectedSha256, CancellationToken ct)
+    {
+        await using var file = File.OpenRead(filePath);
+        var hash = await SHA256.HashDataAsync(file, ct);
+        var actual = Convert.ToHexString(hash).ToLowerInvariant();
+        if (!StringComparer.OrdinalIgnoreCase.Equals(actual, expectedSha256.Trim()))
+            throw new InvalidOperationException("Downloaded installer checksum does not match the update manifest.");
+    }
+}
 
 public sealed class AbdsServiceControl(string serviceName)
 {

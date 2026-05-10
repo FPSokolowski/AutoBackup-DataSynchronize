@@ -162,6 +162,19 @@ const dictionaries = {
       syncOnExit: 'Sync przy wyjściu z aplikacji',
       startupWithWindows: 'Startuj razem z Windows',
       systemPaths: 'Ścieżki systemowe',
+      updater: 'Updater',
+      updateManifestUrl: 'URL manifestu aktualizacji',
+      checkUpdates: 'Sprawdź wersję',
+      installUpdate: 'Pobierz i uruchom instalator',
+      currentVersion: 'Aktualna wersja',
+      latestVersion: 'Najnowsza wersja',
+      updateAvailable: 'Dostępna jest aktualizacja',
+      upToDate: 'ABDS jest aktualny',
+      updateNotConfigured: 'Podaj URL manifestu i zapisz ustawienia.',
+      updateChecking: 'Sprawdzanie aktualizacji...',
+      updateStarting: 'Pobieranie instalatora...',
+      updateStarted: 'Instalator został uruchomiony',
+      updateFailed: 'Nie udało się sprawdzić lub uruchomić aktualizacji',
       saved: 'Ustawienia zapisane',
       weekdaysShort: ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
     },
@@ -371,6 +384,19 @@ const dictionaries = {
       syncOnExit: 'Sync on app exit',
       startupWithWindows: 'Start with Windows',
       systemPaths: 'System paths',
+      updater: 'Updater',
+      updateManifestUrl: 'Update manifest URL',
+      checkUpdates: 'Check version',
+      installUpdate: 'Download and run installer',
+      currentVersion: 'Current version',
+      latestVersion: 'Latest version',
+      updateAvailable: 'Update available',
+      upToDate: 'ABDS is up to date',
+      updateNotConfigured: 'Enter the manifest URL and save settings.',
+      updateChecking: 'Checking for updates...',
+      updateStarting: 'Downloading installer...',
+      updateStarted: 'Installer started',
+      updateFailed: 'Could not check or start update',
       saved: 'Settings saved',
       weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     },
@@ -438,11 +464,14 @@ const state = {
   startup: null,
   recentRuns: [],
   currentRunId: null,
+  updateCurrent: null,
+  updateCheck: null,
   syncStatusFilter: getPreference('abds-sync-status-filter') || 'all',
   language: getPreference('abds-language') || 'pl',
   theme: getPreference('abds-theme') || 'system'
 };
 
+const defaultUpdateManifestUrl = 'https://abds.sokolowskifilip.pl/update/version';
 const pathBrowseRequests = new Map();
 const recentPathsKey = 'abds-recent-paths';
 
@@ -477,7 +506,7 @@ async function init() {
   applyTranslations();
   selectTab(state.activeTab, false);
 
-  await Promise.allSettled([refreshConfig(), refreshPaths(), refreshStartup(), refreshRecentRuns(), refreshStatus()]);
+  await Promise.allSettled([refreshConfig(), refreshPaths(), refreshStartup(), refreshUpdateCurrent(), refreshRecentRuns(), refreshStatus()]);
   renderAll();
 
   const initialRunId = new URLSearchParams(window.location.search).get('runId');
@@ -524,6 +553,8 @@ function handleDocumentClick(event) {
   if (target.dataset.openRun) openTaskModal(target.dataset.openRun);
   if (target.dataset.cancelRun) cancelRun(target.dataset.cancelRun);
   if (target.dataset.headerAction) handleHeaderAction(target.dataset.headerAction);
+  if (target.dataset.updateAction === 'check') checkForUpdates();
+  if (target.dataset.updateAction === 'install') installUpdate();
   if (target.dataset.syncStatusFilter) {
     state.syncStatusFilter = target.dataset.syncStatusFilter;
     setPreference('abds-sync-status-filter', state.syncStatusFilter);
@@ -598,8 +629,12 @@ function selectTab(tabId, render = true) {
 function setActiveTabClasses() {
   document.querySelectorAll('[data-tab]').forEach((button) => {
     const active = button.dataset.tab === state.activeTab;
-    button.classList.toggle('bg-primary', active);
-    button.classList.toggle('text-slate-950', active);
+    button.classList.toggle('ring-1', active);
+    button.classList.toggle('ring-primary/40', active);
+    button.classList.toggle('bg-primary/15', active);
+    button.classList.toggle('text-primary', active);
+    button.classList.toggle('dark:bg-primary', active);
+    button.classList.toggle('dark:text-slate-950', active);
     button.classList.toggle('font-bold', active);
     button.classList.toggle('bg-surface', !active && button.classList.contains('mobile-tab'));
     button.classList.toggle('text-muted', !active && button.classList.contains('nav-btn'));
@@ -762,7 +797,7 @@ async function refreshStatus() {
     state.connected = false;
     setConnection(false, error.message);
   }
-  renderAll();
+  renderRuntimePanels();
 }
 
 async function runServiceAction(action) {
@@ -846,6 +881,14 @@ async function refreshStartup() {
   }
 }
 
+async function refreshUpdateCurrent() {
+  try {
+    state.updateCurrent = await fetchJson('/api/update/current');
+  } catch {
+    state.updateCurrent = null;
+  }
+}
+
 async function refreshRecentRuns() {
   try {
     state.recentRuns = await fetchJson('/api/runs/recent?take=30');
@@ -861,13 +904,17 @@ async function fetchJson(url, options) {
 }
 
 function renderAll() {
+  renderRuntimePanels();
+  renderSettingsPanel();
+}
+
+function renderRuntimePanels() {
   renderStatusPanel();
   renderSyncPanel();
   renderBackupsPanel();
   renderActionsPanel();
   renderHistoryPanel();
   renderDiagnosticsPanel();
-  renderSettingsPanel();
 }
 
 function renderStatusPanel() {
@@ -999,7 +1046,7 @@ function renderSyncPanel() {
 
 function syncFilterButton(filter, label) {
   const active = state.syncStatusFilter === filter;
-  return `<button data-sync-status-filter="${filter}" class="rounded px-3 py-1 font-semibold ${active ? 'bg-secondary text-slate-950' : 'text-muted hover:bg-surface-high'}">${label}</button>`;
+  return `<button data-sync-status-filter="${filter}" class="rounded px-3 py-1 font-semibold ${active ? 'bg-secondary/25 text-slate-950 dark:bg-secondary' : 'text-muted hover:bg-surface-high'}">${label}</button>`;
 }
 
 function syncPairCard(pair, index) {
@@ -1024,7 +1071,7 @@ function syncPairCard(pair, index) {
       </div>
       <div class="flex items-start gap-2">
         <button data-edit-sync="${index}" class="rounded-md border border-outline px-3 py-2 text-sm">${t('common.edit')}</button>
-        <button data-action-type="sync" data-source="${escapeAttr(pair.sourcePath)}" data-target="${escapeAttr((pair.targetPaths || [])[0] || '')}" class="row-run rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950">${t('actions.syncNow')}</button>
+        <button data-action-type="sync" data-source="${escapeAttr(pair.sourcePath)}" data-target="${escapeAttr((pair.targetPaths || [])[0] || '')}" class="row-run rounded-md bg-primary/25 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-primary/35 dark:bg-primary">${t('actions.syncNow')}</button>
       </div>
     </article>
   `;
@@ -1075,7 +1122,7 @@ function backupCard(backup, index) {
       </div>
       <div class="flex items-start gap-2">
         <button data-edit-backup="${index}" class="rounded-md border border-outline px-3 py-2 text-sm">${t('common.edit')}</button>
-        <button data-action-type="backup" data-source="${escapeAttr(backup.sourcePath)}" data-target="${escapeAttr(backup.backupRootPath)}" class="row-run rounded-md bg-secondary px-3 py-2 text-sm font-bold text-slate-950">${t('actions.backupNow')}</button>
+        <button data-action-type="backup" data-source="${escapeAttr(backup.sourcePath)}" data-target="${escapeAttr(backup.backupRootPath)}" class="row-run rounded-md bg-secondary/25 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-secondary/35 dark:bg-secondary">${t('actions.backupNow')}</button>
       </div>
     </article>
   `;
@@ -1129,6 +1176,10 @@ function renderSettingsPanel() {
         ${pathLine('hashcache.json', state.paths?.hashCachePath)}
         ${pathLine('Dumps', state.paths?.dumpsDir)}
       `, 'xl:col-span-6')}
+      ${settingsCard(t('settings.updater'), 'system_update_alt', `
+        ${textField(t('settings.updateManifestUrl'), 'updateManifestUrl', config.update?.manifestUrl || defaultUpdateManifestUrl)}
+        ${updateStatusBlock()}
+      `, 'xl:col-span-12')}
     </form>
   `;
   updateBackupScheduleVisibility();
@@ -1197,6 +1248,26 @@ async function runAction(url, body = null) {
     await refreshStatus();
   } catch {
     showToast(t('actions.actionFailed'), 'danger');
+  }
+}
+
+async function checkForUpdates() {
+  showToast(t('settings.updateChecking'));
+  try {
+    state.updateCheck = await fetchJson('/api/update/check');
+    renderSettingsPanel();
+  } catch {
+    showToast(t('settings.updateFailed'), 'danger');
+  }
+}
+
+async function installUpdate() {
+  showToast(t('settings.updateStarting'));
+  try {
+    const result = await fetchJson('/api/update/install', { method: 'POST' });
+    showToast(result.message || t('settings.updateStarted'));
+  } catch {
+    showToast(t('settings.updateFailed'), 'danger');
   }
 }
 
@@ -1282,6 +1353,8 @@ async function saveSettings() {
   config.schedule.hashBelowSizeMbThreshold = Number(data.get('hashBelowSizeMbThreshold') || 20);
   config.schedule.maxBackupStorageBytes = Number(data.get('maxBackupStorageGb') || 300) * 1024 * 1024 * 1024;
   config.criticalBackupOverdueExtra = `${String(data.get('criticalBackupOverdueExtraHours') || 2).padStart(2, '0')}:00:00`;
+  config.update ??= {};
+  config.update.manifestUrl = String(data.get('updateManifestUrl') || defaultUpdateManifestUrl).trim();
   state.config = await fetchJson('/api/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
   await saveStartupSetting(data.get('startupWithWindows') === 'on');
   showToast(t('settings.saved'));
@@ -1380,7 +1453,7 @@ function setConnection(connected) {
   const serviceActions = document.getElementById('serviceActions');
   if (serviceActions) {
     serviceActions.innerHTML = connected ? '' : `
-      <button data-service-action="start" class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950">
+      <button data-service-action="start" class="inline-flex items-center gap-2 rounded-md bg-primary/25 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-primary/35 dark:bg-primary">
         <span class="material-symbols-outlined text-[18px]">play_arrow</span>${t('connection.startService')}
       </button>
       <button data-service-action="restart" class="inline-flex items-center gap-2 rounded-md border border-danger px-3 py-2 text-sm font-semibold text-danger">
@@ -1398,7 +1471,7 @@ function sectionHeader(title, description, actions) {
         <p class="mt-2 max-w-3xl text-sm text-muted">${description}</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        ${actions.map(([icon, label, action]) => `<button data-header-action="${action}" class="inline-flex items-center gap-2 rounded-md border border-outline bg-surface px-3 py-2 text-sm font-semibold hover:bg-surface-high"><span class="material-symbols-outlined text-[18px]">${icon}</span>${label}</button>`).join('')}
+        ${actions.map(([icon, label, action]) => `<button data-header-action="${action}" class="inline-flex items-center gap-2 rounded-md border border-outline bg-surface px-3 py-2 text-sm font-semibold hover:bg-primary/10 dark:hover:bg-surface-high"><span class="material-symbols-outlined text-[18px]">${icon}</span>${label}</button>`).join('')}
       </div>
     </div>
   `;
@@ -1410,6 +1483,35 @@ function metricCard(label, text, hint, severity) {
 
 function settingsCard(title, icon, content, cols) {
   return `<section class="${cols} rounded-lg border border-outline bg-surface p-5"><div class="mb-4 flex items-center gap-2 border-b border-outline pb-3"><span class="material-symbols-outlined text-primary">${icon}</span><h2 class="font-display text-lg font-semibold">${title}</h2></div><div class="space-y-4">${content}</div></section>`;
+}
+
+function updateStatusBlock() {
+  const result = state.updateCheck;
+  const configured = Boolean(state.config?.update?.manifestUrl);
+  const statusText = result
+    ? result.updateAvailable ? t('settings.updateAvailable') : (result.message || t('settings.upToDate'))
+    : configured ? '-' : t('settings.updateNotConfigured');
+  return `
+    <div class="rounded-lg border border-outline bg-background p-4">
+      <div class="grid gap-3 md:grid-cols-3">
+        ${smallStat(t('settings.currentVersion'), result?.currentVersion || '-')}
+        ${smallStat(t('settings.latestVersion'), result?.latestVersion || '-')}
+        ${smallStat('Runtime', result?.runtime || '-')}
+      </div>
+      <p class="mt-3 text-sm ${result?.updateAvailable ? 'text-warning' : 'text-muted'}">${escapeHtml(statusText)}</p>
+      ${result?.releaseNotes ? `<p class="mt-2 whitespace-pre-wrap text-sm text-muted">${escapeHtml(result.releaseNotes)}</p>` : ''}
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" data-update-action="check" class="inline-flex items-center gap-2 rounded-md border border-outline px-3 py-2 text-sm font-semibold hover:bg-surface-high">
+          <span class="material-symbols-outlined text-[18px]">sync</span>${t('settings.checkUpdates')}
+        </button>
+        ${result?.updateAvailable ? `
+          <button type="button" data-update-action="install" class="inline-flex items-center gap-2 rounded-md bg-primary/25 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-primary/35 dark:bg-primary">
+            <span class="material-symbols-outlined text-[18px]">download</span>${t('settings.installUpdate')}
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
 }
 
 function backupScheduleFields(schedule) {
@@ -1463,7 +1565,7 @@ function updateBackupScheduleVisibility() {
 }
 
 function actionCard(icon, title, description, url) {
-  return `<article class="rounded-lg border border-outline bg-surface p-5"><span class="material-symbols-outlined text-4xl text-primary">${icon}</span><h2 class="mt-3 font-display text-xl font-semibold">${title}</h2><p class="mt-2 text-sm text-muted">${description}</p><button data-run-url="${url}" class="mt-5 rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950">${t('common.run')}</button></article>`;
+  return `<article class="rounded-lg border border-outline bg-surface p-5"><span class="material-symbols-outlined text-4xl text-primary">${icon}</span><h2 class="mt-3 font-display text-xl font-semibold">${title}</h2><p class="mt-2 text-sm text-muted">${description}</p><button data-run-url="${url}" class="mt-5 rounded-md bg-primary/25 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-primary/35 dark:bg-primary">${t('common.run')}</button></article>`;
 }
 
 function diagnosticCard(label, text, severity) {
@@ -1506,7 +1608,7 @@ function checkInput(label, name, checked) {
 }
 
 function modalButtons() {
-  return `<div class="flex justify-end gap-2"><button type="button" data-close-edit class="rounded-md border border-outline px-3 py-2 text-sm">${t('common.cancel')}</button><button class="rounded-md bg-primary px-3 py-2 text-sm font-bold text-slate-950">${t('common.save')}</button></div>`;
+  return `<div class="flex justify-end gap-2"><button type="button" data-close-edit class="rounded-md border border-outline px-3 py-2 text-sm">${t('common.cancel')}</button><button class="rounded-md bg-primary/25 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-primary/35 dark:bg-primary">${t('common.save')}</button></div>`;
 }
 
 function pathLine(label, path) {

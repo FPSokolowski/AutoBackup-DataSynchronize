@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.ServiceProcess;
+using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -71,6 +72,7 @@ public sealed class MainForm : Form
             SetStatus("Ładowanie UI...");
             var webViewEnvironment = await CreateWebViewEnvironmentAsync();
             await _webView.EnsureCoreWebView2Async(webViewEnvironment);
+            await ClearWebViewCacheAfterVersionChangeAsync(_webView.CoreWebView2);
             ConfigureWebView(_webView.CoreWebView2);
             ConfigureWebViewMessages(_webView.CoreWebView2);
             _webView.Source = new Uri(BuildStartUrl());
@@ -178,6 +180,26 @@ public sealed class MainForm : Form
         return string.IsNullOrWhiteSpace(_runId)
             ? WebUrl
             : $"{WebUrl}/?runId={Uri.EscapeDataString(_runId)}";
+    }
+
+    private static async Task ClearWebViewCacheAfterVersionChangeAsync(CoreWebView2 core)
+    {
+        var currentVersion = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion
+            ?? Application.ProductVersion
+            ?? "0.0.0";
+        var markerPath = GetWebViewCacheVersionPath();
+        var previousVersion = File.Exists(markerPath)
+            ? await File.ReadAllTextAsync(markerPath)
+            : null;
+
+        if (string.Equals(previousVersion?.Trim(), currentVersion, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache);
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        await File.WriteAllTextAsync(markerPath, currentVersion);
     }
 
     public static string? ReadRunId(string[] args)
@@ -455,7 +477,7 @@ public sealed class MainForm : Form
 
     private static int Rgb(byte red, byte green, byte blue)
     {
-        return red | (green << 8) | (blue << 16);
+        return red | ( green << 8 ) | ( blue << 16 );
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -531,6 +553,15 @@ public sealed class MainForm : Form
             localAppData = Path.GetTempPath();
 
         return Path.Combine(localAppData, "ABDS", "window-state.json");
+    }
+
+    private static string GetWebViewCacheVersionPath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
+            localAppData = Path.GetTempPath();
+
+        return Path.Combine(localAppData, "ABDS", "webview-cache-version.txt");
     }
 
     private static bool IsVisibleOnAnyScreen(Rectangle bounds)
