@@ -6,7 +6,6 @@ namespace ABDS.Service;
 public sealed class AbdsWorker(
     ILogger<AbdsWorker> log,
     AbdsStateStore store,
-    AbdsIpcServer ipc,
     IHashCache hashCache,
     AbdsWorkerFacade facade
 ) : BackgroundService
@@ -21,7 +20,6 @@ public sealed class AbdsWorker(
         // -----------------------------------------
 
         await store.LoadStateAsync(stoppingToken);
-        await ipc.StartAsync(stoppingToken);
         var nextDelay = TimeSpan.FromMinutes(1);
 
         while (!stoppingToken.IsCancellationRequested)

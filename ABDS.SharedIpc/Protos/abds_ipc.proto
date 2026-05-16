@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option csharp_namespace = "ABDS.SharedIpc";
+
+package abds.ipc;
+
+service AbdsIpcGrpc {
+  rpc Send (GrpcAbdsCommand) returns (GrpcAbdsCommandResponse);
+}
+
+enum GrpcAbdsCommandType {
+  GRPC_ABDS_COMMAND_TYPE_UNSPECIFIED = 0;
+  GET_STATUS = 1;
+  GET_RECENT_RUNS = 2;
+  GET_RUN_DETAILS = 3;
+  GET_RUN_LOGS = 4;
+  FORCE_SYNC_ALL = 5;
+  FORCE_SYNC_PAIR = 6;
+  FORCE_BACKUP_ALL = 7;
+  FORCE_BACKUP_SOURCE = 8;
+  CANCEL_RUN = 9;
+  OPEN_GUI = 10;
+}
+
+message GrpcAbdsCommand {
+  GrpcAbdsCommandType type = 1;
+  map<string, string> args = 2;
+}
+
+message GrpcAbdsCommandResponse {
+  bool ok = 1;
+  string message = 2;
+  string run_id = 3;
+}

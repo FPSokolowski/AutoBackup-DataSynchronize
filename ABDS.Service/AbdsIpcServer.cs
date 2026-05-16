@@ -1,116 +1,28 @@
-﻿using System.IO.Pipes;
-using System.Text;
 using System.Text.Json;
 using ABDS.SharedIpc;
+using Grpc.Core;
 
 namespace ABDS.Service;
 
 public sealed class AbdsIpcServer(AbdsStateStore store, AbdsWorkerFacade facade, ILogger<AbdsIpcServer> log)
+    : AbdsIpcGrpc.AbdsIpcGrpcBase
 {
-    private CancellationToken _ct;
-    private static readonly TimeSpan ClientTimeout = TimeSpan.FromSeconds(20);
-
-    public Task StartAsync(CancellationToken ct)
-    {
-        _ct = ct;
-        _ = Task.Run(ListenLoopAsync, ct);
-        return Task.CompletedTask;
-    }
-
-    private async Task ListenLoopAsync()
-    {
-        while (!_ct.IsCancellationRequested)
-        {
-            NamedPipeServerStream? pipe = null;
-            try
-            {
-                pipe = new NamedPipeServerStream(
-                    AbdsIpc.PipeName,
-                    PipeDirection.InOut,
-                    maxNumberOfServerInstances: 10,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
-
-                await pipe.WaitForConnectionAsync(_ct);
-                var connectedPipe = pipe;
-                pipe = null;
-
-                _ = Task.Run(() => HandleClientAsync(connectedPipe), CancellationToken.None);
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                log.LogError(ex, "IPC error");
-            }
-            finally
-            {
-                pipe?.Dispose();
-            }
-        }
-    }
-
-    private async Task HandleClientAsync(NamedPipeServerStream pipe)
-    {
-        using (pipe)
-        using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(_ct))
-        {
-            timeout.CancelAfter(ClientTimeout);
-            var ct = timeout.Token;
-
-            try
-            {
-                using var sr = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
-                var line = await sr.ReadLineAsync(ct);
-                if (line is null)
-                    return;
-
-                var cmd = JsonSerializer.Deserialize<AbdsCommand>(line);
-                var resp = cmd is null
-                    ? new AbdsCommandResponse(false, "Invalid command.")
-                    : await HandleAsync(cmd, ct);
-
-                await WriteResponseAsync(pipe, resp, ct);
-            }
-            catch (OperationCanceledException) when (_ct.IsCancellationRequested)
-            {
-                // Service is shutting down.
-            }
-            catch (OperationCanceledException ex)
-            {
-                log.LogWarning(ex, "IPC client timed out");
-                await TryWriteResponseAsync(pipe, new AbdsCommandResponse(false, "IPC request timed out."));
-            }
-            catch (JsonException ex)
-            {
-                log.LogWarning(ex, "Invalid IPC payload");
-                await TryWriteResponseAsync(pipe, new AbdsCommandResponse(false, "Invalid command payload."));
-            }
-            catch (Exception ex)
-            {
-                log.LogError(ex, "IPC client error");
-                await TryWriteResponseAsync(pipe, new AbdsCommandResponse(false, ex.Message));
-            }
-        }
-    }
-
-    private static async Task WriteResponseAsync(PipeStream pipe, AbdsCommandResponse response, CancellationToken ct)
-    {
-        var json = JsonSerializer.Serialize(response);
-        var bytes = Encoding.UTF8.GetBytes(json + "\n");
-        await pipe.WriteAsync(bytes, 0, bytes.Length, ct);
-        await pipe.FlushAsync(ct);
-    }
-
-    private static async Task TryWriteResponseAsync(PipeStream pipe, AbdsCommandResponse response)
+    public override async Task<GrpcAbdsCommandResponse> Send(GrpcAbdsCommand request, ServerCallContext context)
     {
         try
         {
-            if (pipe.IsConnected)
-                await WriteResponseAsync(pipe, response, CancellationToken.None);
+            var command = request.ToContract();
+            var response = await HandleAsync(command, context.CancellationToken);
+            return response.ToGrpc();
         }
-        catch
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
         {
-            // The client may have already disconnected.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "gRPC client error");
+            return new AbdsCommandResponse(false, ex.Message).ToGrpc();
         }
     }
 
@@ -137,7 +49,7 @@ public sealed class AbdsIpcServer(AbdsStateStore store, AbdsWorkerFacade facade,
 
             case AbdsCommandType.GetRunDetails:
                 {
-                    var runId = cmd.Args?["runId"];
+                    var runId = cmd.Args?.GetValueOrDefault("runId");
                     if (string.IsNullOrWhiteSpace(runId))
                         return new(false, "runId required");
 
@@ -149,7 +61,7 @@ public sealed class AbdsIpcServer(AbdsStateStore store, AbdsWorkerFacade facade,
 
             case AbdsCommandType.GetRunLogs:
                 {
-                    var runId = cmd.Args?["runId"];
+                    var runId = cmd.Args?.GetValueOrDefault("runId");
                     if (string.IsNullOrWhiteSpace(runId))
                         return new(false, "runId required");
 
@@ -171,38 +83,37 @@ public sealed class AbdsIpcServer(AbdsStateStore store, AbdsWorkerFacade facade,
 
             case AbdsCommandType.ForceSyncPair:
                 {
-                    var src = cmd.Args?["sourcePath"];
-                    var dst = cmd.Args?["targetPath"];
+                    var src = cmd.Args?.GetValueOrDefault("sourcePath");
+                    var dst = cmd.Args?.GetValueOrDefault("targetPath");
                     if (string.IsNullOrWhiteSpace(src) || string.IsNullOrWhiteSpace(dst))
                         return new(false, "sourcePath & targetPath required");
 
-                    var runId = await facade.EnqueueForceSyncPairAsync(src!, dst!, ct);
+                    var runId = await facade.EnqueueForceSyncPairAsync(src, dst, ct);
                     return new(true, "Scheduled sync pair", runId);
                 }
 
             case AbdsCommandType.ForceBackupSource:
                 {
-                    var src = cmd.Args?["sourcePath"];
-                    var root = cmd.Args?["backupRootPath"];
+                    var src = cmd.Args?.GetValueOrDefault("sourcePath");
+                    var root = cmd.Args?.GetValueOrDefault("backupRootPath");
                     if (string.IsNullOrWhiteSpace(src) || string.IsNullOrWhiteSpace(root))
                         return new(false, "sourcePath & backupRootPath required");
 
-                    var runId = await facade.EnqueueForceBackupSourceAsync(src!, root!, ct);
+                    var runId = await facade.EnqueueForceBackupSourceAsync(src, root, ct);
                     return new(true, "Scheduled backup source", runId);
                 }
 
             case AbdsCommandType.CancelRun:
                 {
-                    var runId = cmd.Args?["runId"];
+                    var runId = cmd.Args?.GetValueOrDefault("runId");
                     if (string.IsNullOrWhiteSpace(runId))
                         return new(false, "runId required");
 
-                    facade.Cancel(runId!);
+                    facade.Cancel(runId);
                     return new(true, "Cancel requested");
                 }
 
             case AbdsCommandType.OpenGui:
-                // soft request - GUI/CLI i tak odpali ABDS.App.exe
                 return new(true, "OK");
 
             default:

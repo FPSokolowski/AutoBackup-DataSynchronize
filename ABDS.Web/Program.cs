@@ -114,54 +114,54 @@ app.MapPost("/api/update/install", async (AbdsWebPaths paths, IHttpClientFactory
     return Results.Json(result, jsonOptions);
 });
 
-app.MapGet("/api/status", async (AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapGet("/api/status", async (AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(AbdsCommandType.GetStatus), ct);
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(AbdsCommandType.GetStatus), ct);
     return ToApiResult(response);
 });
 
-app.MapGet("/api/runs/recent", async (int? take, AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapGet("/api/runs/recent", async (int? take, AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(
         AbdsCommandType.GetRecentRuns,
         new Dictionary<string, string> { ["take"] = (take ?? 50).ToString() }), ct);
 
     return ToApiResult(response);
 });
 
-app.MapGet("/api/runs/{runId}", async (string runId, AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapGet("/api/runs/{runId}", async (string runId, AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(
         AbdsCommandType.GetRunDetails,
         new Dictionary<string, string> { ["runId"] = runId }), ct);
 
     return ToApiResult(response);
 });
 
-app.MapGet("/api/runs/{runId}/logs", async (string runId, AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapGet("/api/runs/{runId}/logs", async (string runId, AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(
         AbdsCommandType.GetRunLogs,
         new Dictionary<string, string> { ["runId"] = runId }), ct);
 
     return ToApiResult(response);
 });
 
-app.MapPost("/api/actions/sync/all", async (AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapPost("/api/actions/sync/all", async (AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(AbdsCommandType.ForceSyncAll), ct);
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(AbdsCommandType.ForceSyncAll), ct);
     return ToApiResult(response);
 });
 
-app.MapPost("/api/actions/backup/all", async (AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapPost("/api/actions/backup/all", async (AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(AbdsCommandType.ForceBackupAll), ct);
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(AbdsCommandType.ForceBackupAll), ct);
     return ToApiResult(response);
 });
 
-app.MapPost("/api/actions/sync/pair", async (SyncPairRequest request, AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapPost("/api/actions/sync/pair", async (SyncPairRequest request, AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(
         AbdsCommandType.ForceSyncPair,
         new Dictionary<string, string>
         {
@@ -172,9 +172,9 @@ app.MapPost("/api/actions/sync/pair", async (SyncPairRequest request, AbdsIpcCli
     return ToApiResult(response);
 });
 
-app.MapPost("/api/actions/backup/source", async (BackupSourceRequest request, AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapPost("/api/actions/backup/source", async (BackupSourceRequest request, AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(
         AbdsCommandType.ForceBackupSource,
         new Dictionary<string, string>
         {
@@ -185,9 +185,9 @@ app.MapPost("/api/actions/backup/source", async (BackupSourceRequest request, Ab
     return ToApiResult(response);
 });
 
-app.MapPost("/api/runs/{runId}/cancel", async (string runId, AbdsIpcClient ipc, CancellationToken ct) =>
+app.MapPost("/api/runs/{runId}/cancel", async (string runId, AbdsIpcClient grpc, CancellationToken ct) =>
 {
-    var response = await SendIpcAsync(ipc, new AbdsCommand(
+    var response = await SendGrpcAsync(grpc, new AbdsCommand(
         AbdsCommandType.CancelRun,
         new Dictionary<string, string> { ["runId"] = runId }), ct);
 
@@ -198,11 +198,11 @@ app.MapFallbackToFile("index.html");
 
 await app.RunAsync();
 
-static async Task<AbdsCommandResponse> SendIpcAsync(AbdsIpcClient ipc, AbdsCommand command, CancellationToken ct)
+static async Task<AbdsCommandResponse> SendGrpcAsync(AbdsIpcClient grpc, AbdsCommand command, CancellationToken ct)
 {
     try
     {
-        return await ipc.SendAsync(command, ct);
+        return await grpc.SendAsync(command, ct);
     }
     catch (Exception ex) when (ex is System.TimeoutException or IOException or OperationCanceledException)
     {

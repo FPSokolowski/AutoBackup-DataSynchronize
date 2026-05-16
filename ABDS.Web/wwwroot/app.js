@@ -25,7 +25,7 @@ const dictionaries = {
       backups: ['Backupy', 'Snapshoty i retencja'],
       actions: ['Akcje', 'Ręczne operacje'],
       history: ['Historia', 'Ostatnie zadania'],
-      diagnostics: ['Diagnostyka', 'Usługa, IPC i ścieżki'],
+      diagnostics: ['Diagnostyka', 'Usługa, gRPC i ścieżki'],
       settings: ['Ustawienia', 'Harmonogram i zachowanie']
     },
     connection: {
@@ -34,7 +34,7 @@ const dictionaries = {
       offline: 'Usługa niedostępna',
       offlineTitle: 'Usługa ABDS nie odpowiada',
       offlineBody: 'Panel działa, ale dane statusu i akcje wymagają uruchomionej usługi Windows.',
-      pipe: 'Lokalne IPC',
+      pipe: 'Lokalne gRPC',
       startService: 'Uruchom usługę',
       restartService: 'Restartuj usługę',
       startingService: 'Próba uruchomienia usługi...',
@@ -180,10 +180,10 @@ const dictionaries = {
     },
     diagnostics: {
       title: 'Diagnostyka',
-      desc: 'Stan lokalnego połączenia, IPC i plików w ProgramData.',
+      desc: 'Stan lokalnego połączenia gRPC i plików w ProgramData.',
       windowsService: 'Usługa Windows',
       connected: 'Aktywna',
-      ipc: 'IPC',
+      ipc: 'gRPC',
       dumps: 'Dumpy błędów'
     },
     history: {
@@ -247,7 +247,7 @@ const dictionaries = {
       backups: ['Backups', 'Snapshots and retention'],
       actions: ['Actions', 'Manual operations'],
       history: ['History', 'Recent jobs'],
-      diagnostics: ['Diagnostics', 'Service, IPC and paths'],
+      diagnostics: ['Diagnostics', 'Service, gRPC and paths'],
       settings: ['Settings', 'Schedule and behavior']
     },
     connection: {
@@ -256,7 +256,7 @@ const dictionaries = {
       offline: 'Service unavailable',
       offlineTitle: 'ABDS service is not responding',
       offlineBody: 'The panel is running, but status data and actions require the Windows service.',
-      pipe: 'Local IPC',
+      pipe: 'Local gRPC',
       startService: 'Start service',
       restartService: 'Restart service',
       startingService: 'Trying to start service...',
@@ -402,10 +402,10 @@ const dictionaries = {
     },
     diagnostics: {
       title: 'Diagnostics',
-      desc: 'Local connection, IPC and ProgramData files.',
+      desc: 'Local gRPC connection and ProgramData files.',
       windowsService: 'Windows service',
       connected: 'Active',
-      ipc: 'IPC',
+      ipc: 'gRPC',
       dumps: 'Failure dumps'
     },
     history: {
@@ -1228,7 +1228,7 @@ function renderDiagnosticsPanel() {
     ${sectionHeader(t('diagnostics.title'), t('diagnostics.desc'), [])}
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       ${diagnosticCard(t('diagnostics.windowsService'), state.connected ? t('diagnostics.connected') : t('connection.offline'), state.connected ? 'Ok' : 'Critical')}
-      ${diagnosticCard(t('diagnostics.ipc'), 'ABDS_PIPE_V1', state.connected ? 'Ok' : 'Warning')}
+      ${diagnosticCard(t('diagnostics.ipc'), 'http://127.0.0.1:5077', state.connected ? 'Ok' : 'Warning')}
       ${diagnosticCard('config.json', state.paths?.configPath || '-', 'Ok')}
       ${diagnosticCard(t('diagnostics.dumps'), state.paths?.dumpsDir || '-', 'Warning')}
     </div>
@@ -1256,7 +1256,15 @@ async function checkForUpdates() {
   try {
     state.updateCheck = await fetchJson('/api/update/check');
     renderSettingsPanel();
-  } catch {
+  } catch (error) {
+    state.updateCheck = {
+      ...(state.updateCurrent || {}),
+      latestVersion: null,
+      updateAvailable: false,
+      installerUrl: null,
+      message: error.message || t('settings.updateFailed')
+    };
+    renderSettingsPanel();
     showToast(t('settings.updateFailed'), 'danger');
   }
 }
@@ -1486,8 +1494,8 @@ function settingsCard(title, icon, content, cols) {
 }
 
 function updateStatusBlock() {
-  const result = state.updateCheck;
-  const configured = Boolean(state.config?.update?.manifestUrl);
+  const result = state.updateCheck || state.updateCurrent;
+  const configured = Boolean(state.config?.update?.manifestUrl || defaultUpdateManifestUrl);
   const statusText = result
     ? result.updateAvailable ? t('settings.updateAvailable') : (result.message || t('settings.upToDate'))
     : configured ? '-' : t('settings.updateNotConfigured');

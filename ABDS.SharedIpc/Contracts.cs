@@ -2,7 +2,10 @@
 
 public static class AbdsIpc
 {
-    public const string PipeName = "ABDS_PIPE_V1";
+    public const string DefaultGrpcEndpoint = "http://127.0.0.1:5077";
+
+    public static string GrpcEndpoint =>
+        Environment.GetEnvironmentVariable("ABDS_GRPC_ENDPOINT") ?? DefaultGrpcEndpoint;
 }
 
 public enum AbdsCommandType
@@ -31,6 +34,71 @@ public sealed record AbdsCommandResponse(
     string Message,
     string? RunId = null
 );
+
+public static class AbdsCommandGrpcMapper
+{
+    public static GrpcAbdsCommand ToGrpc(this AbdsCommand command)
+    {
+        var grpc = new GrpcAbdsCommand
+        {
+            Type = command.Type.ToGrpc()
+        };
+
+        if (command.Args is not null)
+        {
+            foreach (var (key, value) in command.Args)
+                grpc.Args[key] = value;
+        }
+
+        return grpc;
+    }
+
+    public static AbdsCommand ToContract(this GrpcAbdsCommand command)
+        => new(command.Type.ToContract(), command.Args.ToDictionary(x => x.Key, x => x.Value));
+
+    public static AbdsCommandResponse ToContract(this GrpcAbdsCommandResponse response)
+        => new(response.Ok, response.Message, string.IsNullOrWhiteSpace(response.RunId) ? null : response.RunId);
+
+    public static GrpcAbdsCommandResponse ToGrpc(this AbdsCommandResponse response)
+        => new()
+        {
+            Ok = response.Ok,
+            Message = response.Message,
+            RunId = response.RunId ?? ""
+        };
+
+    private static GrpcAbdsCommandType ToGrpc(this AbdsCommandType type)
+        => type switch
+        {
+            AbdsCommandType.GetStatus => GrpcAbdsCommandType.GetStatus,
+            AbdsCommandType.GetRecentRuns => GrpcAbdsCommandType.GetRecentRuns,
+            AbdsCommandType.GetRunDetails => GrpcAbdsCommandType.GetRunDetails,
+            AbdsCommandType.GetRunLogs => GrpcAbdsCommandType.GetRunLogs,
+            AbdsCommandType.ForceSyncAll => GrpcAbdsCommandType.ForceSyncAll,
+            AbdsCommandType.ForceSyncPair => GrpcAbdsCommandType.ForceSyncPair,
+            AbdsCommandType.ForceBackupAll => GrpcAbdsCommandType.ForceBackupAll,
+            AbdsCommandType.ForceBackupSource => GrpcAbdsCommandType.ForceBackupSource,
+            AbdsCommandType.CancelRun => GrpcAbdsCommandType.CancelRun,
+            AbdsCommandType.OpenGui => GrpcAbdsCommandType.OpenGui,
+            _ => GrpcAbdsCommandType.Unspecified
+        };
+
+    private static AbdsCommandType ToContract(this GrpcAbdsCommandType type)
+        => type switch
+        {
+            GrpcAbdsCommandType.GetStatus => AbdsCommandType.GetStatus,
+            GrpcAbdsCommandType.GetRecentRuns => AbdsCommandType.GetRecentRuns,
+            GrpcAbdsCommandType.GetRunDetails => AbdsCommandType.GetRunDetails,
+            GrpcAbdsCommandType.GetRunLogs => AbdsCommandType.GetRunLogs,
+            GrpcAbdsCommandType.ForceSyncAll => AbdsCommandType.ForceSyncAll,
+            GrpcAbdsCommandType.ForceSyncPair => AbdsCommandType.ForceSyncPair,
+            GrpcAbdsCommandType.ForceBackupAll => AbdsCommandType.ForceBackupAll,
+            GrpcAbdsCommandType.ForceBackupSource => AbdsCommandType.ForceBackupSource,
+            GrpcAbdsCommandType.CancelRun => AbdsCommandType.CancelRun,
+            GrpcAbdsCommandType.OpenGui => AbdsCommandType.OpenGui,
+            _ => throw new InvalidOperationException("Unknown ABDS gRPC command type.")
+        };
+}
 
 // status snapshot dla GUI
 public sealed record AbdsStatusSnapshotDto(

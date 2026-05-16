@@ -84,7 +84,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         {
             var serviceStatus = GetServiceStatus();
             var severity = serviceStatus == ServiceControllerStatus.Running ? "Warning" : "Critical";
-            ApplyStatus(severity, $"ABDS: brak połączenia IPC. Usługa: {serviceStatus?.ToString() ?? "niezainstalowana"}");
+            ApplyStatus(severity, $"ABDS: brak połączenia gRPC. Usługa: {serviceStatus?.ToString() ?? "niezainstalowana"}");
 
             if (_lastServiceProblemNotificationAt is null ||
                 DateTimeOffset.Now - _lastServiceProblemNotificationAt.Value > TimeSpan.FromMinutes(30))
